@@ -87,8 +87,9 @@ export class BusyTeXCompiler {
         this.worker.onmessage = (e) => this._handleWorkerMessage(e);
         this.worker.onerror = (e) => this._handleWorkerError(e);
 
-        // Get absolute URL for busytex.js
-        const busytexJsUrl = new URL('busytex.js', window.location.href).href;
+        // Get absolute URL for busytex.js - derive from wasmUrl
+        const wasmUrlObj = new URL(this.wasmUrl, window.location.href);
+        const busytexJsUrl = new URL('busytex.js', wasmUrlObj.href).href;
 
         // Send init message
         return new Promise((resolve, reject) => {

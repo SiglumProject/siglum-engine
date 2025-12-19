@@ -302,6 +302,56 @@ cd packages/bundles
 python3 sync-package-map.py
 ```
 
+## Public API
+
+We provide free public services for TeX bundles and CTAN package fetching. Anyone can use them:
+
+```javascript
+const compiler = new BusyTeXCompiler({
+    bundlesUrl: 'https://packages.siglum.org',
+    wasmUrl: 'https://packages.siglum.org/wasm/busytex.wasm',
+    ctanProxyUrl: 'https://ctan-proxy.siglum.org',
+});
+```
+
+### Services
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Demo | `busytex-lazy.siglum.org` | Interactive demo application |
+| Packages | `packages.siglum.org` | Bundle and WASM file hosting |
+| CTAN Proxy | `ctan-proxy.siglum.org` | CORS-enabled CTAN package fetching |
+
+### Package Endpoints (packages.siglum.org)
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /{name}.data.gz` | Download bundle data (gzipped) |
+| `GET /{name}.meta.json` | Bundle metadata |
+| `GET /registry.json` | List all available bundles |
+| `GET /package-map.json` | Package name → bundle mapping |
+| `GET /wasm/busytex.wasm` | BusyTeX WebAssembly binary |
+| `GET /wasm/busytex.js` | BusyTeX JavaScript loader |
+
+### CTAN Proxy (ctan-proxy.siglum.org)
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /{package}` | Fetch CTAN package files |
+
+Response format:
+```json
+{
+  "files": {
+    "/texmf-dist/tex/latex/pkg/pkg.sty": {
+      "content": "...",
+      "encoding": "text"
+    }
+  },
+  "dependencies": ["dep1", "dep2"]
+}
+```
+
 ## Credits
 
 This project builds on:

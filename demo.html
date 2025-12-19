@@ -123,14 +123,29 @@ $E = mc^2$
             document.getElementById('ctanCount').textContent = stats.ctan.fetchCount;
         }
 
+        // Detect environment and set URLs
+        const isProduction = location.hostname.includes('siglum.org') || location.hostname.includes('pages.dev');
+        // Use workers.dev URL until custom domains are configured
+        const API_BASE = 'https://siglum-api.vtp-ips.workers.dev';
+        const config = isProduction ? {
+            bundlesUrl: API_BASE + '/bundles',
+            wasmUrl: API_BASE + '/wasm/busytex.wasm',
+            ctanProxyUrl: API_BASE,
+        } : {
+            bundlesUrl: 'packages/bundles',
+            wasmUrl: 'busytex.wasm',
+            ctanProxyUrl: 'http://localhost:8081',
+        };
+
         async function init() {
             log('Initializing compiler...');
+            log(`Environment: ${isProduction ? 'production' : 'local'}`);
             updateStatus('Initializing...');
 
             compiler = new BusyTeXCompiler({
-                bundlesUrl: 'packages/bundles',
-                wasmUrl: 'busytex.wasm',
-                ctanProxyUrl: 'http://localhost:8081',
+                bundlesUrl: config.bundlesUrl,
+                wasmUrl: config.wasmUrl,
+                ctanProxyUrl: config.ctanProxyUrl,
                 enableCtan: document.getElementById('enableCtan').checked,
                 enableLazyFS: document.getElementById('enableLazyFS').checked,
                 enableDocCache: document.getElementById('enableDocCache').checked,
