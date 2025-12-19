@@ -166,15 +166,29 @@ export class BusyTeXCompiler {
 
         try {
             this._log('Worker requested CTAN package: ' + packageName);
-            const result = await this.ctanFetcher.fetchWithDependencies(packageName);
+            // Only fetch this specific package, not dependencies
+            // Dependencies are resolved by the worker's retry loop - if a dependency
+            // is missing, the worker will request it specifically
+            const result = await this.ctanFetcher.fetchPackage(packageName);
+
+            if (!result) {
+                this.worker.postMessage({
+                    type: 'ctan-fetch-response',
+                    requestId,
+                    packageName,
+                    success: false,
+                    error: 'Package not found',
+                });
+                return;
+            }
 
             this.worker.postMessage({
                 type: 'ctan-fetch-response',
                 requestId,
                 packageName,
                 success: true,
-                files: Object.fromEntries(result),
-                dependencies: [],
+                files: Object.fromEntries(result.files),
+                dependencies: result.dependencies || [],
             });
         } catch (e) {
             this._log('CTAN fetch error: ' + e.message);
@@ -219,12 +233,8 @@ export class BusyTeXCompiler {
         this.onProgress('loading', 'Loading bundles...');
         const bundleData = await this.bundleManager.loadBundles(bundles);
 
-        // Pre-read CTAN files from cache
-        const ctanFiles = {};
-        for (const filePath of this.ctanFetcher.getMountedFiles()) {
-            const content = await readFromOPFS(filePath);
-            if (content) ctanFiles[filePath] = content;
-        }
+        // Get CTAN files from memory cache (populated by previous fetches)
+        const ctanFiles = this.ctanFetcher.getCachedFiles();
 
         // Check for cached format
         let cachedFormat = null;
@@ -342,12 +352,8 @@ export class BusyTeXCompiler {
         const { bundles } = this.bundleManager.checkPackages(source, engine);
         const bundleData = await this.bundleManager.loadBundles(bundles);
 
-        // Pre-read CTAN files
-        const ctanFiles = {};
-        for (const filePath of this.ctanFetcher.getMountedFiles()) {
-            const content = await readFromOPFS(filePath);
-            if (content) ctanFiles[filePath] = content;
-        }
+        // Get CTAN files from memory cache
+        const ctanFiles = this.ctanFetcher.getCachedFiles();
 
         this._log('Generating format file...');
         this.onProgress('format', 'Generating format...');

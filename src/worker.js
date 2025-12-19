@@ -801,45 +801,99 @@ async function handleFormatGenerate(request) {
     bundleDeps = bundleDepsData;
     bundleRegistry = new Set(bundleRegistryData);
 
-    try {
-        const Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
-        const FS = Module.FS;
+    const bundleDataMap = bundleData instanceof Map ? bundleData : new Map(Object.entries(bundleData));
+    const accumulatedCtanFiles = new Map();
 
-        const bundleDataMap = bundleData instanceof Map ? bundleData : new Map(Object.entries(bundleData));
-        for (const [bundleName, data] of bundleDataMap) {
-            mountBundleEager(FS, bundleName, data, fileManifest);
-        }
+    // Initialize with provided CTAN files
+    if (ctanFiles) {
+        const ctanFilesMap = ctanFiles instanceof Map ? ctanFiles : new Map(Object.entries(ctanFiles));
+        for (const [path, content] of ctanFilesMap) accumulatedCtanFiles.set(path, content);
+    }
 
-        if (ctanFiles) {
-            const ctanFilesMap = ctanFiles instanceof Map ? ctanFiles : new Map(Object.entries(ctanFiles));
-            for (const [filePath, content] of ctanFilesMap) {
+    let retryCount = 0;
+    const maxRetries = 10;
+    const ctanFetched = new Set();
+
+    while (retryCount < maxRetries) {
+        try {
+            const Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
+            const FS = Module.FS;
+
+            mountedBundles.clear();
+            bundleCache.clear();
+
+            for (const [bundleName, data] of bundleDataMap) {
+                mountBundleEager(FS, bundleName, data, fileManifest);
+            }
+
+            // Mount accumulated CTAN files
+            ctanMountedFiles.clear();
+            for (const [filePath, content] of accumulatedCtanFiles) {
                 if (fileManifest[filePath]) continue;
                 ensureDirectory(FS, filePath.substring(0, filePath.lastIndexOf('/')));
-                try { FS.writeFile(filePath, content); } catch (e) {}
+                try {
+                    FS.writeFile(filePath, content);
+                    ctanMountedFiles.add(filePath);
+                } catch (e) {}
             }
+
+            FS.writeFile('/texlive/texmf-dist/ls-R', generateLsR(FS, '/texlive/texmf-dist'));
+            FS.writeFile('/myformat.ini', preambleContent + '\n\\dump\n');
+
+            const result = Module.callMainWithRedirects([
+                'pdflatex', '-ini', '-jobname=myformat', '-interaction=nonstopmode',
+                '&/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex', '/myformat.ini'
+            ]);
+
+            if (result.exit_code === 0) {
+                const formatData = FS.readFile('/myformat.fmt');
+                workerLog('Format generated: ' + (formatData.byteLength / 1024 / 1024).toFixed(1) + 'MB in ' + (performance.now() - startTime).toFixed(0) + 'ms');
+
+                self.postMessage({
+                    type: 'format-generate-response', id, success: true, formatData: formatData.buffer
+                }, [formatData.buffer]);
+                return;
+            }
+
+            // Format generation failed - check for missing packages
+            let logContent = '';
+            try { logContent = new TextDecoder().decode(FS.readFile('/myformat.log')); } catch (e) {}
+            const allOutput = logContent + ' ' + (result.stdout || '') + ' ' + (result.stderr || '');
+            const missingFile = extractMissingFile(allOutput, ctanFetched);
+
+            if (missingFile) {
+                const pkgName = getPackageFromFile(missingFile);
+                workerLog('Format missing: ' + missingFile + ', fetching ' + pkgName + ' from CTAN...');
+                try {
+                    const ctanData = await requestCtanFetch(pkgName);
+                    if (ctanData.success) {
+                        ctanFetched.add(pkgName);
+                        const files = ctanData.files instanceof Map ? ctanData.files : new Map(Object.entries(ctanData.files));
+                        for (const [path, content] of files) accumulatedCtanFiles.set(path, content);
+                        retryCount++;
+                        workerLog('Retry format generation #' + retryCount + '...');
+                        continue;
+                    }
+                } catch (e) {
+                    workerLog('CTAN fetch failed: ' + e.message);
+                }
+            }
+
+            // No missing file found or CTAN fetch failed
+            throw new Error('Format generation failed with exit code ' + result.exit_code);
+
+        } catch (e) {
+            if (retryCount >= maxRetries - 1) {
+                workerLog('Format generation error: ' + e.message);
+                self.postMessage({ type: 'format-generate-response', id, success: false, error: e.message });
+                return;
+            }
+            throw e;
         }
-
-        FS.writeFile('/texlive/texmf-dist/ls-R', generateLsR(FS, '/texlive/texmf-dist'));
-        FS.writeFile('/myformat.ini', preambleContent + '\n\\dump\n');
-
-        const result = Module.callMainWithRedirects([
-            'pdflatex', '-ini', '-jobname=myformat', '-interaction=nonstopmode',
-            '&/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex', '/myformat.ini'
-        ]);
-
-        if (result.exit_code !== 0) throw new Error('Format generation failed');
-
-        const formatData = FS.readFile('/myformat.fmt');
-        workerLog('Format generated: ' + (formatData.byteLength / 1024 / 1024).toFixed(1) + 'MB in ' + (performance.now() - startTime).toFixed(0) + 'ms');
-
-        self.postMessage({
-            type: 'format-generate-response', id, success: true, formatData: formatData.buffer
-        }, [formatData.buffer]);
-
-    } catch (e) {
-        workerLog('Format generation error: ' + e.message);
-        self.postMessage({ type: 'format-generate-response', id, success: false, error: e.message });
     }
+
+    workerLog('Format generation failed after ' + maxRetries + ' retries');
+    self.postMessage({ type: 'format-generate-response', id, success: false, error: 'Max retries exceeded' });
 }
 
 // Message handler

@@ -15,6 +15,91 @@ TeX Live is massive. A minimal pdflatex installation is 100MB+, and supporting c
 3. **CTAN fallback**: Missing packages automatically downloaded from CTAN mirrors
 4. **Persistent caching**: OPFS/IndexedDB storage eliminates repeat downloads
 
+## Installation
+
+### ES Modules (Browser)
+
+busytex-lazy is designed for direct browser usage with ES modules - no bundler required:
+
+```html
+<script type="module">
+import { BusyTeXCompiler } from './src/index.js';
+
+const compiler = new BusyTeXCompiler({
+    bundlesUrl: 'packages/bundles',
+    wasmUrl: 'busytex.wasm',
+    ctanProxyUrl: 'http://localhost:8081',
+    onLog: (msg) => console.log(msg),
+    onProgress: (stage, detail) => console.log(`${stage}: ${detail}`),
+});
+
+await compiler.init();
+
+const result = await compiler.compile(`
+\\documentclass{article}
+\\begin{document}
+Hello, World!
+\\end{document}
+`);
+
+if (result.success) {
+    const blob = new Blob([result.pdf], { type: 'application/pdf' });
+    window.open(URL.createObjectURL(blob));
+}
+</script>
+```
+
+### Available Exports
+
+```javascript
+// Main compiler class
+import { BusyTeXCompiler } from './src/index.js';
+
+// Bundle management
+import { BundleManager, detectEngine, extractPreamble, hashPreamble } from './src/index.js';
+
+// CTAN package fetching
+import { CTANFetcher, getPackageFromFile, isValidPackageName } from './src/index.js';
+
+// Storage utilities
+import { clearCTANCache, hashDocument, getCachedPdf, saveCachedPdf, listAllCachedPackages } from './src/index.js';
+```
+
+### Compiler Options
+
+```javascript
+const compiler = new BusyTeXCompiler({
+    bundlesUrl: 'packages/bundles',  // Path to bundle files
+    wasmUrl: 'busytex.wasm',         // Path to BusyTeX WASM
+    workerUrl: null,                 // Custom worker URL (uses embedded if null)
+    ctanProxyUrl: 'http://localhost:8081',  // CTAN proxy server
+    enableCtan: true,                // Enable CTAN fallback for missing packages
+    enableLazyFS: true,              // Enable lazy file loading
+    enableDocCache: true,            // Cache compiled PDFs
+    onLog: (msg) => {},              // Log callback
+    onProgress: (stage, detail) => {},  // Progress callback
+});
+```
+
+### Compilation Options
+
+```javascript
+const result = await compiler.compile(source, {
+    engine: 'pdflatex',  // 'pdflatex' | 'xelatex' | 'lualatex' (auto-detected if not specified)
+    useCache: true,      // Use cached PDF if available
+});
+
+// Result object
+{
+    success: boolean,
+    pdf: Uint8Array,     // PDF data (if successful)
+    cached: boolean,     // Whether result came from cache
+    error: string,       // Error message (if failed)
+    log: string,         // LaTeX log output
+    stats: object,       // Compilation statistics
+}
+```
+
 ## Prerequisites
 
 This project uses [BusyTeX](https://github.com/busytex/busytex) as a git submodule. After cloning, you need to build or download the WASM files:
@@ -37,6 +122,9 @@ Or download pre-built binaries from the [BusyTeX releases](https://github.com/bu
 ```bash
 # Start a local server
 python3 -m http.server 8080
+
+# (Optional) Start CTAN proxy for package fallback
+cd packages && bun run ctan-proxy.ts
 
 # Open in browser
 open http://localhost:8080/split-bundle-lazy.html
@@ -143,10 +231,17 @@ Subsequent compiles with warm cache: 1-3s regardless of complexity.
 
 ```
 .
+├── src/                    # ES module source files
+│   ├── index.js            # Main entry point (exports all public APIs)
+│   ├── compiler.js         # BusyTeXCompiler class
+│   ├── bundles.js          # BundleManager, engine detection, preamble handling
+│   ├── ctan.js             # CTANFetcher for missing package resolution
+│   ├── storage.js          # OPFS/IndexedDB caching layer
+│   └── worker.js           # Web Worker for off-main-thread compilation
 ├── busytex/                # BusyTeX submodule (build to get .js/.wasm)
 ├── busytex.js              # BusyTeX WASM JavaScript (built from submodule)
 ├── busytex.wasm            # BusyTeX WebAssembly binary (built from submodule)
-├── split-bundle-lazy.html  # Main application (self-contained HTML)
+├── split-bundle-lazy.html  # Demo application
 ├── README.md
 └── packages/
     ├── bundles/            # Pre-built TeX bundles
@@ -159,6 +254,16 @@ Subsequent compiles with warm cache: 1-3s regardless of complexity.
     └── ctan-proxy.ts       # Development CTAN proxy server
 ```
 
+### Module Overview
+
+| Module | Description |
+|--------|-------------|
+| `compiler.js` | Main orchestrator - initializes worker, handles compile requests, manages caching |
+| `bundles.js` | Loads bundle manifests, resolves package dependencies, detects required engine |
+| `ctan.js` | Fetches missing packages from CTAN, caches to OPFS |
+| `storage.js` | OPFS and IndexedDB operations for persistent caching |
+| `worker.js` | Runs in Web Worker - mounts bundles, executes WASM, returns PDF |
+
 ## Development
 
 ### Running Locally
@@ -167,12 +272,26 @@ Subsequent compiles with warm cache: 1-3s regardless of complexity.
 # Start file server
 python3 -m http.server 8080
 
-# (Optional) Start CTAN proxy for local caching
+# (Optional) Start CTAN proxy for package fallback
 cd packages && bun run ctan-proxy.ts
 
-# Open in browser
-open http://localhost:8080/split-bundle-lazy.html
+# Open demo in browser
+open http://localhost:8080/split-bundle-lazy.html  # Standalone demo
+open http://localhost:8080/demo.html               # ES modules demo
 ```
+
+### Using in Your Project
+
+Copy the `src/` directory and `packages/bundles/` to your project, then import:
+
+```javascript
+import { BusyTeXCompiler } from './src/index.js';
+```
+
+Requirements:
+- Serve with `Content-Type: application/javascript` for `.js` files
+- CORS headers if loading bundles from a different origin
+- CTAN proxy running for dynamic package resolution (optional)
 
 ### Modifying Bundles
 

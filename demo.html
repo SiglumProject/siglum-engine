@@ -9,12 +9,10 @@
         p { color: #86868b; margin-bottom: 24px; }
         h3 { font-size: 13px; font-weight: 500; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
         .container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; height: 55vh; min-height: 400px; margin-bottom: 16px; }
-        .container > div { display: flex; flex-direction: column; min-height: 0; }
+        .container > div { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
         textarea { flex: 1; width: 100%; font-family: 'SF Mono', Menlo, monospace; font-size: 13px; padding: 16px; border: 1px solid #d2d2d7; border-radius: 12px; resize: none; outline: none; transition: border-color 0.2s; }
         textarea:focus { border-color: #0071e3; }
-        #pdfViewer { flex: 1; width: 100%; border-radius: 12px; overflow-y: auto; background: #f5f5f7; }
-        #pdfViewer .page-container { margin: 16px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 4px; overflow: hidden; }
-        #pdfViewer canvas { display: block; }
+        #pdfViewer { flex: 1; width: 100%; border: none; border-radius: 12px; background: #f5f5f7; }
         .controls { margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         button { padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; background: #0071e3; color: #fff; border: none; border-radius: 8px; transition: opacity 0.2s; }
         button:hover { opacity: 0.85; }
@@ -28,7 +26,6 @@
         .stats { padding: 12px 16px; background: #f5f5f7; border-radius: 10px; font-size: 12px; margin-bottom: 16px; color: #86868b; }
         .stats strong { color: #1d1d1f; font-weight: 500; }
         #time { font-size: 13px; color: #86868b; font-weight: 500; }
-        #renderStats { font-weight: 400; font-size: 11px; color: #86868b; }
     </style>
 </head>
 <body>
@@ -92,146 +89,18 @@ $E = mc^2$
 \end{document}</textarea>
         </div>
         <div>
-            <h3>PDF Preview <span id="renderStats" style="font-weight: normal; font-size: 12px; color: #666;"></span></h3>
-            <div id="pdfViewer"></div>
+            <h3>PDF Preview</h3>
+            <iframe id="pdfViewer"></iframe>
         </div>
     </div>
 
     <div id="status">Ready. Click "Compile" to start.</div>
 
-    <!-- PDF.js for rendering -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
-
     <script type="module">
         import { BusyTeXCompiler, detectEngine } from './src/index.js';
 
-        // PDF.js setup
-        const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
-
-        // ============================================================
-        // Incremental PDF Viewer - Only re-renders changed pages
-        // ============================================================
-        const IncrementalPDFViewer = {
-            container: null,
-            pageCache: new Map(),  // pageNum -> { hash, canvas }
-            currentPdf: null,
-            scale: 1.5,
-            lastRenderStats: { total: 0, rerendered: 0, cached: 0 },
-
-            init(containerId) {
-                this.container = document.getElementById(containerId);
-            },
-
-            async hashPage(page) {
-                const textContent = await page.getTextContent();
-                const textStr = textContent.items.map(item => item.str || '').join('');
-                const ops = await page.getOperatorList();
-                const opsStr = ops.fnArray.join(',');
-                const combined = textStr + '|' + opsStr + '|' + ops.argsArray.length;
-                let hash = 5381;
-                for (let i = 0; i < combined.length; i++) {
-                    hash = ((hash << 5) + hash) + combined.charCodeAt(i);
-                    hash = hash & hash;
-                }
-                return hash;
-            },
-
-            async render(pdfBytes) {
-                const startTime = performance.now();
-                const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-                const numPages = pdf.numPages;
-
-                let rerendered = 0;
-                let cached = 0;
-
-                this.ensurePageContainers(numPages);
-
-                for (let i = 1; i <= numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const hash = await this.hashPage(page);
-                    const cachedPage = this.pageCache.get(i);
-
-                    if (cachedPage && cachedPage.hash === hash) {
-                        cached++;
-                        continue;
-                    }
-
-                    rerendered++;
-                    const canvas = await this.renderPage(page, i);
-                    this.pageCache.set(i, { hash, canvas });
-                }
-
-                for (let i = numPages + 1; this.pageCache.has(i); i++) {
-                    this.pageCache.delete(i);
-                }
-
-                while (this.container.children.length > numPages) {
-                    this.container.removeChild(this.container.lastChild);
-                }
-
-                this.currentPdf = pdf;
-                const renderTime = performance.now() - startTime;
-                this.lastRenderStats = { total: numPages, rerendered, cached };
-
-                const statsEl = document.getElementById('renderStats');
-                if (statsEl) {
-                    if (cached > 0) {
-                        statsEl.textContent = `(${rerendered}/${numPages} pages rendered, ${cached} cached, ${renderTime.toFixed(0)}ms)`;
-                        statsEl.style.color = '#2e7d32';
-                    } else {
-                        statsEl.textContent = `(${numPages} pages, ${renderTime.toFixed(0)}ms)`;
-                        statsEl.style.color = '#666';
-                    }
-                }
-
-                return this.lastRenderStats;
-            },
-
-            ensurePageContainers(numPages) {
-                for (let i = this.container.children.length; i < numPages; i++) {
-                    const pageContainer = document.createElement('div');
-                    pageContainer.className = 'page-container';
-                    pageContainer.dataset.pageNum = i + 1;
-                    const canvas = document.createElement('canvas');
-                    pageContainer.appendChild(canvas);
-                    this.container.appendChild(pageContainer);
-                }
-            },
-
-            async renderPage(page, pageNum) {
-                const viewport = page.getViewport({ scale: this.scale });
-                const container = this.container.children[pageNum - 1];
-                const displayCanvas = container.querySelector('canvas');
-
-                const offscreen = document.createElement('canvas');
-                offscreen.width = viewport.width;
-                offscreen.height = viewport.height;
-                const offscreenCtx = offscreen.getContext('2d');
-
-                await page.render({
-                    canvasContext: offscreenCtx,
-                    viewport: viewport
-                }).promise;
-
-                displayCanvas.width = viewport.width;
-                displayCanvas.height = viewport.height;
-                const displayCtx = displayCanvas.getContext('2d');
-                displayCtx.drawImage(offscreen, 0, 0);
-
-                return displayCanvas;
-            },
-
-            clear() {
-                this.pageCache.clear();
-                this.container.innerHTML = '';
-                this.currentPdf = null;
-            }
-        };
-
-        IncrementalPDFViewer.init('pdfViewer');
-
         let compiler = null;
+        let currentPdfUrl = null;
         let compileTimeout = null;
         let autoCompileEnabled = false;
 
@@ -307,7 +176,13 @@ $E = mc^2$
                     if (result.cached) {
                         log('(from cache)');
                     }
-                    await IncrementalPDFViewer.render(result.pdf);
+                    // Display PDF in iframe using blob URL
+                    if (currentPdfUrl) {
+                        URL.revokeObjectURL(currentPdfUrl);
+                    }
+                    const blob = new Blob([result.pdf], { type: 'application/pdf' });
+                    currentPdfUrl = URL.createObjectURL(blob);
+                    document.getElementById('pdfViewer').src = currentPdfUrl;
                 } else {
                     log('Compilation failed: ' + (result.error || 'Unknown error'));
                     if (result.log) {

@@ -12,8 +12,15 @@ export class CTANFetcher {
     constructor(options = {}) {
         this.proxyUrl = options.proxyUrl || 'http://localhost:8081';
         this.mountedFiles = new Set();
+        this.fileCache = new Map(); // Memory cache for file contents
         this.fetchCount = 0;
         this.onLog = options.onLog || (() => {});
+    }
+
+    // Get all cached file contents (for passing to worker)
+    // Only returns files that were loaded in this session (via fetchPackage)
+    getCachedFiles() {
+        return Object.fromEntries(this.fileCache);
     }
 
     async loadPackageFromCache(packageName) {
@@ -27,14 +34,33 @@ export class CTANFetcher {
             // Check if it's a "not found" marker
             if (meta.notFound) return { notFound: true };
 
-            // Load files from OPFS
+            // Check memory cache first, then OPFS
             const files = new Map();
-            if (meta.files) {
+            if (meta.files && meta.files.length > 0) {
+                const filesToLoad = [];
                 for (const filePath of meta.files) {
-                    const content = await readFromOPFS(filePath);
-                    if (content) {
-                        files.set(filePath, content);
+                    if (this.fileCache.has(filePath)) {
+                        files.set(filePath, this.fileCache.get(filePath));
                         this.mountedFiles.add(filePath);
+                    } else {
+                        filesToLoad.push(filePath);
+                    }
+                }
+
+                // Load any missing files from OPFS
+                if (filesToLoad.length > 0) {
+                    const results = await Promise.all(
+                        filesToLoad.map(async (filePath) => {
+                            const content = await readFromOPFS(filePath);
+                            return content ? [filePath, content] : null;
+                        })
+                    );
+                    for (const result of results) {
+                        if (result) {
+                            files.set(result[0], result[1]);
+                            this.mountedFiles.add(result[0]);
+                            this.fileCache.set(result[0], result[1]); // Cache in memory
+                        }
                     }
                 }
             }
@@ -99,6 +125,7 @@ export class CTANFetcher {
                 }
                 files.set(path, content);
                 this.mountedFiles.add(path);
+                this.fileCache.set(path, content); // Store in memory for fast access
 
                 // Cache to OPFS
                 await writeToOPFS(path, content);

@@ -34,7 +34,9 @@ export class BundleManager {
         ]);
 
         this.fileManifest = await manifestRes.json();
-        this.bundleRegistry = new Set(await registryRes.json());
+        const registryData = await registryRes.json();
+        // Registry contains objects with {name, files, size} - extract just names
+        this.bundleRegistry = new Set(registryData.map(b => typeof b === 'string' ? b : b.name));
         this.packageMap = await packageMapRes.json();
 
         return this.fileManifest;
@@ -67,38 +69,39 @@ export class BundleManager {
         const bundles = new Set();
         const resolved = new Set();
 
-        // Core bundles always needed
-        bundles.add('core');
-        bundles.add('latex-base');
-        bundles.add('l3');
-        bundles.add('graphics');
-        bundles.add('tools');
-
-        // Engine-specific format bundle
-        if (engine === 'pdflatex') {
-            bundles.add('fmt-pdflatex');
-            bundles.add('fonts-cm');
-            bundles.add('amsfonts');
-        } else if (engine === 'xelatex') {
-            bundles.add('fmt-xelatex');
-            bundles.add('fontspec');
-            bundles.add('unicode-math');
+        // Add engine-required bundles from bundle-deps.json
+        const engineDeps = this.bundleDeps?.engines?.[engine];
+        if (engineDeps?.required) {
+            for (const b of engineDeps.required) {
+                if (this.bundleExists(b)) bundles.add(b);
+            }
         }
 
+        // Recursive function to add bundle and its dependencies
+        const addBundle = (bundleName) => {
+            if (resolved.has(bundleName)) return;
+            resolved.add(bundleName);
+
+            if (!this.bundleExists(bundleName)) return;
+            bundles.add(bundleName);
+
+            // Resolve bundle dependencies from bundleDeps.bundles
+            const bundleInfo = this.bundleDeps?.bundles?.[bundleName];
+            if (bundleInfo?.requires) {
+                for (const dep of bundleInfo.requires) {
+                    addBundle(dep);
+                }
+            }
+        };
+
         const resolvePackage = (pkg) => {
-            if (resolved.has(pkg)) return;
-            resolved.add(pkg);
+            if (resolved.has('pkg:' + pkg)) return;
+            resolved.add('pkg:' + pkg);
 
             // Find bundle for package
             const bundleName = this.packageMap?.[pkg];
-            if (bundleName && this.bundleExists(bundleName)) {
-                bundles.add(bundleName);
-
-                // Resolve bundle dependencies
-                const deps = this.bundleDeps?.[bundleName] || [];
-                for (const dep of deps) {
-                    if (this.bundleExists(dep)) bundles.add(dep);
-                }
+            if (bundleName) {
+                addBundle(bundleName);
             }
 
             // Resolve package-level dependencies

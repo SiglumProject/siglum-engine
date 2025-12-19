@@ -8,4 +8,5 @@ export {
     hashDocument,
     getCachedPdf,
     saveCachedPdf,
+    listAllCachedPackages,
 } from './storage.js';

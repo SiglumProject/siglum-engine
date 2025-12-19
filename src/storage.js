@@ -57,6 +57,22 @@ export async function savePackageMeta(packageName, meta) {
     }
 }
 
+// List all cached CTAN packages and their file paths
+export async function listAllCachedPackages() {
+    try {
+        const db = await openIDBCache();
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const store = tx.objectStore(IDB_STORE);
+            const request = store.getAll();
+            request.onerror = () => resolve([]);
+            request.onsuccess = () => resolve(request.result || []);
+        });
+    } catch (e) {
+        return [];
+    }
+}
+
 // OPFS operations
 export async function getOPFSRoot() {
     if (opfsRoot) return opfsRoot;
