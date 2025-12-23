@@ -422,4 +422,90 @@ export async function clearCTANCache() {
     }
 }
 
-export { CTAN_CACHE_VERSION, BUNDLE_CACHE_VERSION };
+// WASM cache - stores COMPILED WebAssembly.Module in IndexedDB for instant instantiation
+const WASM_CACHE_VERSION = 2; // Bump to invalidate old byte caches
+const WASM_DB_NAME = 'siglum-wasm-cache';
+const WASM_STORE = 'modules';
+
+let wasmCacheDb = null;
+
+async function openWasmCacheDb() {
+    if (wasmCacheDb) return wasmCacheDb;
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(WASM_DB_NAME, WASM_CACHE_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            wasmCacheDb = request.result;
+            resolve(wasmCacheDb);
+        };
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            // Clear old stores on version upgrade
+            for (const name of db.objectStoreNames) {
+                db.deleteObjectStore(name);
+            }
+            db.createObjectStore(WASM_STORE, { keyPath: 'key' });
+        };
+    });
+}
+
+// Get cached compiled WebAssembly.Module from IndexedDB
+export async function getCompiledWasmModule() {
+    try {
+        const db = await openWasmCacheDb();
+        return new Promise((resolve) => {
+            const tx = db.transaction(WASM_STORE, 'readonly');
+            const store = tx.objectStore(WASM_STORE);
+            const request = store.get('busytex');
+            request.onerror = () => resolve(null);
+            request.onsuccess = () => {
+                const result = request.result;
+                if (result?.module instanceof WebAssembly.Module) {
+                    console.log('Loaded compiled WASM module from IndexedDB cache');
+                    resolve(result.module);
+                } else {
+                    resolve(null);
+                }
+            };
+        });
+    } catch (e) {
+        console.warn('Failed to get cached WASM module:', e);
+        return null;
+    }
+}
+
+// Save compiled WebAssembly.Module to IndexedDB
+export async function saveCompiledWasmModule(module) {
+    try {
+        const db = await openWasmCacheDb();
+        return new Promise((resolve) => {
+            const tx = db.transaction(WASM_STORE, 'readwrite');
+            const store = tx.objectStore(WASM_STORE);
+            const request = store.put({ key: 'busytex', module, timestamp: Date.now() });
+            request.onerror = () => {
+                console.warn('Failed to cache compiled WASM module');
+                resolve(false);
+            };
+            request.onsuccess = () => {
+                console.log('Cached compiled WASM module to IndexedDB');
+                resolve(true);
+            };
+        });
+    } catch (e) {
+        console.warn('Failed to save compiled WASM module:', e);
+        return false;
+    }
+}
+
+// Legacy OPFS functions - keep for backwards compatibility during transition
+export async function getWasmFromOPFS() {
+    // Try new IndexedDB cache first
+    return null; // Disable legacy OPFS cache - use getCompiledWasmModule instead
+}
+
+export async function saveWasmToOPFS(wasmBytes) {
+    // No longer used - we cache compiled modules instead of bytes
+    return false;
+}
+
+export { CTAN_CACHE_VERSION, BUNDLE_CACHE_VERSION, WASM_CACHE_VERSION };

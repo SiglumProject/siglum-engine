@@ -1025,152 +1025,152 @@
       "path": "/texlive/texmf-dist/texmf-var/fonts/map/pdftex/updmap",
       "name": "pdftex.map",
       "start": 1275037,
-      "end": 1351267
+      "end": 1411660
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/fonts/map/pdftex/updmap",
       "name": "pdftex_dl14.map",
-      "start": 1351267,
-      "end": 1427497
+      "start": 1411660,
+      "end": 1487890
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/fonts/map/pdftex/updmap",
       "name": "pdftex_ndl14.map",
-      "start": 1427497,
-      "end": 1502062
+      "start": 1487890,
+      "end": 1562455
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/tex/generic/config",
       "name": "language.dat",
-      "start": 1502062,
-      "end": 1504871
+      "start": 1562455,
+      "end": 1565264
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/tex/generic/config",
       "name": "language.dat.lua",
-      "start": 1504871,
-      "end": 1506436
+      "start": 1565264,
+      "end": 1566829
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/tex/generic/config",
       "name": "language.def",
-      "start": 1506436,
-      "end": 1507916
+      "start": 1566829,
+      "end": 1568309
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/luahbtex",
       "name": "luahbtex.log",
-      "start": 1507916,
-      "end": 1512864
+      "start": 1568309,
+      "end": 1573257
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/luahbtex",
       "name": "lualatex.log",
-      "start": 1512864,
-      "end": 1558526
+      "start": 1573257,
+      "end": 1618919
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "etex.log",
-      "start": 1558526,
-      "end": 1562876
+      "start": 1618919,
+      "end": 1623269
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "latex.log",
-      "start": 1562876,
-      "end": 1627495
+      "start": 1623269,
+      "end": 1687888
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "mptopdf.fmt",
-      "start": 1627495,
-      "end": 1730797
+      "start": 1687888,
+      "end": 1791190
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "mptopdf.log",
-      "start": 1730797,
-      "end": 1735141
+      "start": 1791190,
+      "end": 1795534
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "pdfetex.log",
-      "start": 1735141,
-      "end": 1739901
+      "start": 1795534,
+      "end": 1800294
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "pdflatex.log",
-      "start": 1739901,
-      "end": 1804717
+      "start": 1800294,
+      "end": 1865110
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "pdftex.log",
-      "start": 1804717,
-      "end": 1809473
+      "start": 1865110,
+      "end": 1869866
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c",
       "name": "updmap.log",
-      "start": 1809473,
-      "end": 1829681
+      "start": 1869866,
+      "end": 1890074
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/xetex",
       "name": "xelatex-dev.fmt",
-      "start": 1829681,
-      "end": 10546386
+      "start": 1890074,
+      "end": 10606779
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/xetex",
       "name": "xelatex-dev.log",
-      "start": 10546386,
-      "end": 10591752
+      "start": 10606779,
+      "end": 10652145
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/xetex",
       "name": "xelatex.log",
-      "start": 10591752,
-      "end": 10636945
+      "start": 10652145,
+      "end": 10697338
     },
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/xetex",
       "name": "xetex.log",
-      "start": 10636945,
-      "end": 10641002
+      "start": 10697338,
+      "end": 10701395
     },
     {
       "path": "/texlive/texmf-dist/xdvi",
       "name": "XDvi",
-      "start": 10641002,
-      "end": 10654914
+      "start": 10701395,
+      "end": 10715307
     },
     {
       "path": "/texlive/texmf-dist/xdvi/pixmap",
       "name": "toolbar.xpm",
-      "start": 10654914,
-      "end": 10663080
+      "start": 10715307,
+      "end": 10723473
     },
     {
       "path": "/texlive/texmf-dist/xdvi/pixmap",
       "name": "toolbar2.xpm",
-      "start": 10663080,
-      "end": 10670818
+      "start": 10723473,
+      "end": 10731211
     },
     {
       "path": "/texlive",
       "name": "texmf.cnf",
-      "start": 10670818,
-      "end": 10670818
+      "start": 10731211,
+      "end": 10731211
     },
     {
       "path": "/texlive",
       "name": "texmfcnf.lua",
-      "start": 10670818,
-      "end": 10670818
+      "start": 10731211,
+      "end": 10731211
     }
   ],
-  "totalSize": 10670818
+  "totalSize": 10731211
 }

@@ -2,6 +2,18 @@
 <html>
 <head>
     <title>BusyTeX Lazy Loading Demo</title>
+    <!-- Preconnect to API for faster first fetch -->
+    <link rel="preconnect" href="https://siglum-api.vtp-ips.workers.dev" crossorigin>
+    <!-- Preload critical assets - all pdflatex required bundles -->
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/wasm/busytex.wasm" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/core.data.gz" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/fmt-pdflatex.data.gz" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/l3.data.gz" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/fonts-cm.data.gz" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/fonts-misc.data.gz" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/fonts-lm-type1.data.gz" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/dvips.data.gz" as="fetch" crossorigin>
+    <link rel="preload" href="https://siglum-api.vtp-ips.workers.dev/bundles/extra.data.gz" as="fetch" crossorigin>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 40px 20px; color: #1d1d1f; background: #fff; }
@@ -125,7 +137,7 @@ $E = mc^2$
 
         // Detect environment and set URLs
         const isProduction = location.hostname.includes('siglum.org') || location.hostname.includes('pages.dev');
-        // Use workers.dev URL until custom domains are configured
+        // All assets from R2 via worker (edge cached), some bundles >25MB Pages limit
         const API_BASE = 'https://siglum-api.vtp-ips.workers.dev';
         const config = isProduction ? {
             bundlesUrl: API_BASE + '/bundles',
@@ -160,6 +172,26 @@ $E = mc^2$
             document.getElementById('compileBtn').disabled = false;
             log('Compiler ready!');
             updateStats();
+
+            // Warm-up compile in background - preloads bundles and WASM
+            warmup();
+        }
+
+        async function warmup() {
+            log('Warming up (minimal compile)...');
+            // Minimal document - only loads core + fmt-pdflatex bundles
+            // Other bundles (amsmath, etc) will be fetched on first real compile
+            const warmupDoc = `\\documentclass{article}
+\\begin{document}
+x
+\\end{document}`;
+            try {
+                const start = performance.now();
+                await compiler.compile(warmupDoc, 'pdflatex');
+                log(`Warmup complete in ${(performance.now() - start).toFixed(0)}ms`);
+            } catch (e) {
+                log('Warmup failed (non-critical): ' + e.message);
+            }
         }
 
         async function compile() {
@@ -289,6 +321,15 @@ $E = mc^2$
                 console.error(e);
             });
         });
+
+        // Register Service Worker for instant loading
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./src/sw.js').then(reg => {
+                console.log('Service Worker registered');
+            }).catch(err => {
+                console.log('Service Worker registration failed:', err);
+            });
+        }
 
         // Initialize on load
         init().catch(e => {

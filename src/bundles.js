@@ -3,8 +3,12 @@
 import { getBundleFromOPFS, saveBundleToOPFS } from './storage.js';
 
 // Decompression using native CompressionStream
-async function decompress(compressed) {
-    const ds = new DecompressionStream('gzip');
+async function decompress(compressed, format = 'gzip') {
+    // If format is 'none', return as-is (already decompressed by browser)
+    if (format === 'none') {
+        return compressed;
+    }
+    const ds = new DecompressionStream(format);
     const blob = new Blob([compressed]);
     const stream = blob.stream().pipeThrough(ds);
     return await new Response(stream).arrayBuffer();
@@ -27,10 +31,12 @@ export class BundleManager {
     async loadManifest() {
         if (this.fileManifest) return this.fileManifest;
 
+        // Cache-bust config files to ensure fresh data after deployments
+        const cacheBuster = `?v=${Date.now()}`;
         const [manifestRes, registryRes, packageMapRes] = await Promise.all([
-            fetch(`${this.bundleBase}/file-manifest.json`),
-            fetch(`${this.bundleBase}/registry.json`),
-            fetch(`${this.bundleBase}/package-map.json`),
+            fetch(`${this.bundleBase}/file-manifest.json${cacheBuster}`),
+            fetch(`${this.bundleBase}/registry.json${cacheBuster}`),
+            fetch(`${this.bundleBase}/package-map.json${cacheBuster}`),
         ]);
 
         this.fileManifest = await manifestRes.json();
@@ -46,9 +52,11 @@ export class BundleManager {
         if (this.bundleDeps) return this.bundleDeps;
 
         try {
+            // Cache-bust config files to ensure fresh data after deployments
+            const cacheBuster = `?v=${Date.now()}`;
             const [bundleDepsRes, packageDepsRes] = await Promise.all([
-                fetch(`${this.bundleBase}/bundle-deps.json`),
-                fetch(`${this.bundleBase}/package-deps.json`).catch(() => null),
+                fetch(`${this.bundleBase}/bundle-deps.json${cacheBuster}`),
+                fetch(`${this.bundleBase}/package-deps.json${cacheBuster}`).catch(() => null),
             ]);
             this.bundleDeps = await bundleDepsRes.json();
             if (packageDepsRes) {
@@ -172,7 +180,10 @@ export class BundleManager {
         const compressed = await response.arrayBuffer();
         this.bytesDownloaded += compressed.byteLength;
 
-        const decompressed = await decompress(compressed);
+        // Check if response was Brotli-compressed (browser already decompressed)
+        const contentEncoding = response.headers.get('Content-Encoding');
+        const format = contentEncoding === 'br' ? 'none' : 'gzip';
+        const decompressed = await decompress(compressed, format);
         this.bundleCache.set(bundleName, decompressed);
 
         // Save to OPFS in background
@@ -181,7 +192,84 @@ export class BundleManager {
         return decompressed;
     }
 
+    // Load combined pdflatex bundle (all required bundles in one file)
+    async loadCombinedBundle(engine = 'pdflatex') {
+        const combinedName = `${engine}-all`;
+
+        // Check memory cache
+        if (this.combinedBundleLoaded) {
+            return true;
+        }
+
+        let combinedData;
+        let combinedMeta;
+
+        // Check OPFS cache for combined bundle
+        const cached = await getBundleFromOPFS(combinedName);
+
+        if (cached) {
+            this.onLog(`  From OPFS: ${combinedName}`);
+            combinedData = cached;
+            this.cacheHitCount++;
+            // Still need metadata
+            const metaResponse = await fetch(`${this.bundleBase}/${combinedName}.meta.json`);
+            if (!metaResponse.ok) return false;
+            combinedMeta = await metaResponse.json();
+        } else {
+            // Fetch combined bundle (server may return Brotli-compressed with Content-Encoding)
+            this.onLog(`  Fetching: ${combinedName} (combined bundle)`);
+
+            const [dataResponse, metaResponse] = await Promise.all([
+                fetch(`${this.bundleBase}/${combinedName}.data.gz`),
+                fetch(`${this.bundleBase}/${combinedName}.meta.json`),
+            ]);
+
+            if (!dataResponse.ok || !metaResponse.ok) {
+                this.onLog(`  Combined bundle not available, falling back to individual bundles`);
+                return false;
+            }
+
+            // Check if server sent Brotli (browser auto-decompresses via Content-Encoding)
+            const contentEncoding = dataResponse.headers.get('Content-Encoding');
+            const rawData = await dataResponse.arrayBuffer();
+            this.bytesDownloaded += rawData.byteLength;
+
+            // If Content-Encoding was set, browser already decompressed
+            // Otherwise we need to decompress gzip ourselves
+            if (contentEncoding === 'br') {
+                combinedData = rawData; // Already decompressed by browser
+            } else {
+                combinedData = await decompress(rawData, 'gzip');
+            }
+            combinedMeta = await metaResponse.json();
+
+            // Save decompressed to OPFS
+            saveBundleToOPFS(combinedName, combinedData);
+        }
+
+        // Store the combined data under each constituent bundle name
+        for (const bundleName of combinedMeta.bundles) {
+            this.bundleCache.set(bundleName, combinedData);
+        }
+
+        // Store metadata for file extraction
+        this.combinedMeta = combinedMeta;
+        this.combinedBundleLoaded = true;
+
+        this.onLog(`  Loaded combined bundle: ${combinedMeta.bundles.length} bundles, ${combinedMeta.files.length} files`);
+        return true;
+    }
+
     async loadBundles(bundleNames) {
+        // If combined bundle is loaded, all data is already cached
+        if (this.combinedBundleLoaded) {
+            const bundleData = {};
+            for (const name of bundleNames) {
+                bundleData[name] = this.bundleCache.get(name);
+            }
+            return bundleData;
+        }
+
         const bundleData = {};
         await Promise.all(bundleNames.map(async (name) => {
             try {
@@ -199,6 +287,20 @@ export class BundleManager {
             cacheHits: this.cacheHitCount,
             bundlesCached: this.bundleCache.size,
         };
+    }
+
+    // Preload all required bundles for an engine (call during init)
+    async preloadEngine(engine = 'pdflatex') {
+        await this.loadBundleDeps();
+        const engineDeps = this.bundleDeps?.engines?.[engine];
+        if (!engineDeps?.required) return;
+
+        this.onLog(`Preloading ${engine} bundles...`);
+
+        // Load individual bundles in parallel (HTTP/2 multiplexing)
+        // Combined bundle disabled due to Content-Encoding browser issues
+        await this.loadBundles(engineDeps.required);
+        this.onLog(`Preload complete: ${engineDeps.required.length} bundles`);
     }
 }
 

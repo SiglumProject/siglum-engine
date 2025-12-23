@@ -24,7 +24,8 @@
         "fonts-misc",
         "fonts-lm-type1",
         "dvips",
-        "extra"
+        "extra",
+        "cm-super"
       ]
     },
     "lualatex": {
@@ -186,6 +187,9 @@
       "requires": [
         "graphics"
       ]
+    },
+    "cm-super": {
+      "requires": []
     }
   },
   "packages": {

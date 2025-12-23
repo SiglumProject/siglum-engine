@@ -1,5 +1,372 @@
 // BusyTeX Compilation Worker
-// This worker handles LaTeX compilation in a separate thread
+// Uses VirtualFileSystem for unified file mounting
+
+// ============ Virtual FileSystem (inlined for worker compatibility) ============
+
+class VirtualFileSystem {
+    constructor(FS, options = {}) {
+        this.FS = FS;
+        this.MEMFS = FS.filesystems.MEMFS;
+        this.onLog = options.onLog || (() => {});
+        this.mountedFiles = new Set();
+        this.mountedDirs = new Set();
+        this.pendingFontMaps = new Set();
+        this.bundleCache = new Map();
+        this.lazyEnabled = options.lazyEnabled || false;
+        this.lazyMarkerSymbol = '__siglum_lazy__';
+    }
+
+    mount(path, content, trackFontMaps = true) {
+        this._ensureDirectory(path);
+        const data = typeof content === 'string' ? new TextEncoder().encode(content) : content;
+        try {
+            this.FS.writeFile(path, data);
+            this.mountedFiles.add(path);
+            if (trackFontMaps) this._trackFontFile(path);
+        } catch (e) {
+            this.onLog(`Failed to mount ${path}: ${e.message}`);
+        }
+    }
+
+    mountLazy(path, bundleName, start, end, trackFontMaps = true) {
+        this._ensureDirectory(path);
+        const dirPath = path.substring(0, path.lastIndexOf('/'));
+        const fileName = path.substring(path.lastIndexOf('/') + 1);
+        try {
+            const parentNode = this.FS.lookupPath(dirPath).node;
+            if (parentNode.contents?.[fileName]) return;
+            const node = this.MEMFS.createNode(parentNode, fileName, 33206, 0);
+            node.contents = this._createLazyMarker(bundleName, start, end);
+            node.usedBytes = end - start;
+            this.mountedFiles.add(path);
+            if (trackFontMaps) this._trackFontFile(path);
+        } catch (e) {
+            this.onLog(`Failed to mount lazy ${path}: ${e.message}`);
+        }
+    }
+
+    mountBundle(bundleName, bundleData, manifest, bundleMeta = null) {
+        this.bundleCache.set(bundleName, bundleData);
+        let mounted = 0;
+        const bundleFiles = [];
+
+        // Check if bundle files are in the global manifest
+        for (const [path, info] of Object.entries(manifest)) {
+            if (info.bundle === bundleName) bundleFiles.push([path, info]);
+        }
+
+        // If no files found in manifest, use bundle-specific metadata
+        if (bundleFiles.length === 0 && bundleMeta?.files) {
+            for (const fileInfo of bundleMeta.files) {
+                const fullPath = `${fileInfo.path}/${fileInfo.name}`;
+                bundleFiles.push([fullPath, { start: fileInfo.start, end: fileInfo.end }]);
+            }
+        }
+
+        const dirs = new Set();
+        for (const [path] of bundleFiles) {
+            const dir = path.substring(0, path.lastIndexOf('/'));
+            if (dir) dirs.add(dir);
+        }
+        for (const dir of dirs) this._ensureDirectoryPath(dir);
+
+        // Track font files for later pdftex.map rewriting
+        const isFontBundle = bundleName === 'cm-super' || bundleName.startsWith('fonts-');
+
+        for (const [path, info] of bundleFiles) {
+            if (this.mountedFiles.has(path)) continue;
+            if (this.lazyEnabled && !this._shouldEagerLoad(path)) {
+                this.mountLazy(path, bundleName, info.start, info.end, false);
+            } else {
+                const content = new Uint8Array(bundleData.slice(info.start, info.end));
+                this.mount(path, content, false);
+            }
+            mounted++;
+
+            // Track font files for pdftex.map rewriting
+            if (isFontBundle && (path.endsWith('.pfb') || path.endsWith('.enc'))) {
+                const filename = path.substring(path.lastIndexOf('/') + 1);
+                this.fontFileLocations = this.fontFileLocations || new Map();
+                this.fontFileLocations.set(filename, path);
+            }
+        }
+        this.onLog(`Mounted ${mounted} files from bundle ${bundleName}`);
+        return mounted;
+    }
+
+    mountCtanFiles(files) {
+        const filesMap = files instanceof Map ? files : new Map(Object.entries(files));
+        let mounted = 0;
+        for (const [path, content] of filesMap) {
+            if (this.mountedFiles.has(path)) continue;
+            const data = typeof content === 'string'
+                ? (content.startsWith('base64:') ? this._decodeBase64(content.slice(7)) : new TextEncoder().encode(content))
+                : content;
+            this.mount(path, data, true);  // Track font maps for CTAN packages
+            mounted++;
+        }
+        this.onLog(`Mounted ${mounted} CTAN files`);
+        return mounted;
+    }
+
+    processFontMaps() {
+        if (this.pendingFontMaps.size === 0) return;
+        const PDFTEX_MAP_PATH = '/texlive/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map';
+        let existingMap = '';
+        try {
+            existingMap = new TextDecoder().decode(this.FS.readFile(PDFTEX_MAP_PATH));
+        } catch (e) {
+            this._ensureDirectoryPath(PDFTEX_MAP_PATH.substring(0, PDFTEX_MAP_PATH.lastIndexOf('/')));
+        }
+        let appended = 0;
+        for (const mapPath of this.pendingFontMaps) {
+            try {
+                const mapContent = new TextDecoder().decode(this.FS.readFile(mapPath));
+                const rewrittenContent = this._rewriteMapPaths(mapContent, mapPath);
+                existingMap += `\n% Added from ${mapPath}\n${rewrittenContent}\n`;
+                appended++;
+            } catch (e) {
+                this.onLog(`Failed to process font map ${mapPath}: ${e.message}`);
+            }
+        }
+        if (appended > 0) {
+            this.FS.writeFile(PDFTEX_MAP_PATH, existingMap);
+            this.onLog(`Processed ${appended} font maps`);
+        }
+        this.pendingFontMaps.clear();
+    }
+
+    _rewriteMapPaths(mapContent, mapFilePath) {
+        const lines = mapContent.split('\n');
+        const mapDir = mapFilePath.substring(0, mapFilePath.lastIndexOf('/'));
+        const packageMatch = mapFilePath.match(/\/([^\/]+)\/[^\/]+\.map$/);
+        const packageName = packageMatch ? packageMatch[1] : '';
+        const searchPaths = {
+            pfb: [`/texlive/texmf-dist/fonts/type1/public/${packageName}`, '/texlive/texmf-dist/fonts/type1/public/cm-super', mapDir],
+            enc: [`/texlive/texmf-dist/fonts/enc/dvips/${packageName}`, '/texlive/texmf-dist/fonts/enc/dvips/cm-super', `/texlive/texmf-dist/fonts/type1/public/${packageName}`, mapDir]
+        };
+        return lines.map(line => {
+            if (line.trim().startsWith('%') || line.trim() === '') return line;
+            let rewritten = line;
+            const fileRefPattern = /<<?([a-zA-Z0-9_-]+\.(pfb|enc))/g;
+            let match;
+            while ((match = fileRefPattern.exec(line)) !== null) {
+                const [fullMatch, filename, ext] = match;
+                const prefix = fullMatch.startsWith('<<') ? '<<' : '<';
+                const paths = searchPaths[ext] || [];
+                for (const searchDir of paths) {
+                    const candidatePath = `${searchDir}/${filename}`;
+                    try {
+                        if (this.FS.analyzePath(candidatePath).exists) {
+                            rewritten = rewritten.replace(fullMatch, `${prefix}${candidatePath}`);
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+            return rewritten;
+        }).join('\n');
+    }
+
+    generateLsR(basePath = '/texlive/texmf-dist') {
+        const dirContents = new Map();
+        dirContents.set(basePath, { files: [], subdirs: [] });
+        const getDir = (dirPath) => {
+            if (!dirContents.has(dirPath)) dirContents.set(dirPath, { files: [], subdirs: [] });
+            return dirContents.get(dirPath);
+        };
+        for (const path of this.mountedFiles) {
+            if (!path.startsWith(basePath)) continue;
+            const lastSlash = path.lastIndexOf('/');
+            if (lastSlash < 0) continue;
+            const dirPath = path.substring(0, lastSlash);
+            const fileName = path.substring(lastSlash + 1);
+            let current = basePath;
+            for (const part of dirPath.substring(basePath.length + 1).split('/').filter(p => p)) {
+                const parent = getDir(current);
+                current = `${current}/${part}`;
+                if (!parent.subdirs.includes(part)) parent.subdirs.push(part);
+                getDir(current);
+            }
+            getDir(dirPath).files.push(fileName);
+        }
+        const output = ['% ls-R -- filename database.', '% Created by Siglum VFS', ''];
+        const outputDir = (dirPath) => {
+            const contents = dirContents.get(dirPath);
+            if (!contents) return;
+            output.push(`${dirPath}:`);
+            contents.files.sort().forEach(f => output.push(f));
+            contents.subdirs.sort().forEach(d => output.push(d));
+            output.push('');
+            contents.subdirs.sort().forEach(subdir => outputDir(`${dirPath}/${subdir}`));
+        };
+        outputDir(basePath);
+        const lsRContent = output.join('\n');
+        this.FS.writeFile(`${basePath}/ls-R`, lsRContent);
+        return lsRContent;
+    }
+
+    finalize() {
+        this.processFontMaps();
+        this.rewritePdftexMapPaths();
+        this.generateLsR();
+        this.onLog(`VFS finalized: ${this.mountedFiles.size} files`);
+    }
+
+    rewritePdftexMapPaths() {
+        // Rewrite pdftex.map to use absolute paths for font files
+        // This ensures pdfTeX can find fonts without relying on kpathsea search
+        if (!this.fontFileLocations || this.fontFileLocations.size === 0) return;
+
+        const PDFTEX_MAP_PATH = '/texlive/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map';
+        try {
+            const mapContent = new TextDecoder().decode(this.FS.readFile(PDFTEX_MAP_PATH));
+            const lines = mapContent.split('\n');
+            let modifiedCount = 0;
+
+            const rewrittenLines = lines.map(line => {
+                if (line.trim().startsWith('%') || line.trim() === '') return line;
+
+                let rewritten = line;
+                // Match font file references: <filename.pfb or <<filename.pfb or <filename.enc
+                const fileRefPattern = /<<?([a-zA-Z0-9_-]+\.(pfb|enc))/g;
+                let match;
+                while ((match = fileRefPattern.exec(line)) !== null) {
+                    const [fullMatch, filename] = match;
+                    const absolutePath = this.fontFileLocations.get(filename);
+                    if (absolutePath) {
+                        const prefix = fullMatch.startsWith('<<') ? '<<' : '<';
+                        rewritten = rewritten.replace(fullMatch, `${prefix}${absolutePath}`);
+                        modifiedCount++;
+                    }
+                }
+                return rewritten;
+            });
+
+            if (modifiedCount > 0) {
+                const newMapContent = rewrittenLines.join('\n');
+                this.FS.writeFile(PDFTEX_MAP_PATH, newMapContent);
+                this.onLog(`Rewrote pdftex.map: ${modifiedCount} font paths resolved`);
+            }
+        } catch (e) {
+            // pdftex.map might not exist yet, that's OK
+        }
+    }
+
+    _createLazyMarker(bundleName, start, end) {
+        return { [this.lazyMarkerSymbol]: true, bundleName, start, end, length: end - start, byteLength: end - start };
+    }
+
+    isLazyMarker(obj) {
+        return obj && typeof obj === 'object' && obj[this.lazyMarkerSymbol] === true;
+    }
+
+    resolveLazy(marker) {
+        const bundleData = this.bundleCache.get(marker.bundleName);
+        if (!bundleData) {
+            this.onLog(`ERROR: Bundle not in cache: ${marker.bundleName}`);
+            return new Uint8Array(0);
+        }
+        return new Uint8Array(bundleData.slice(marker.start, marker.end));
+    }
+
+    patchForLazyLoading() {
+        const vfs = this;
+        const ensureResolved = (node) => {
+            if (vfs.isLazyMarker(node.contents)) {
+                const resolved = vfs.resolveLazy(node.contents);
+                node.contents = resolved;
+                node.usedBytes = resolved.length;
+            }
+        };
+        const originalRead = this.MEMFS.stream_ops.read;
+        this.MEMFS.stream_ops.read = function(stream, buffer, offset, length, position) {
+            ensureResolved(stream.node);
+            return originalRead.call(this, stream, buffer, offset, length, position);
+        };
+        if (this.MEMFS.ops_table?.file?.stream?.read) {
+            const originalTableRead = this.MEMFS.ops_table.file.stream.read;
+            this.MEMFS.ops_table.file.stream.read = function(stream, buffer, offset, length, position) {
+                ensureResolved(stream.node);
+                return originalTableRead.call(this, stream, buffer, offset, length, position);
+            };
+        }
+        if (this.MEMFS.stream_ops.mmap) {
+            const originalMmap = this.MEMFS.stream_ops.mmap;
+            this.MEMFS.stream_ops.mmap = function(stream, length, position, prot, flags) {
+                ensureResolved(stream.node);
+                return originalMmap.call(this, stream, length, position, prot, flags);
+            };
+        }
+        this.lazyEnabled = true;
+        this.onLog('VFS: Lazy loading enabled');
+    }
+
+    _ensureDirectory(filePath) {
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
+        this._ensureDirectoryPath(dirPath);
+    }
+
+    _ensureDirectoryPath(dirPath) {
+        if (this.mountedDirs.has(dirPath)) return;
+        const parts = dirPath.split('/').filter(p => p);
+        let current = '';
+        for (const part of parts) {
+            current += '/' + part;
+            if (this.mountedDirs.has(current)) continue;
+            try { this.FS.stat(current); } catch (e) { try { this.FS.mkdir(current); } catch (e2) {} }
+            this.mountedDirs.add(current);
+        }
+    }
+
+    _shouldEagerLoad(path) {
+        // Eager load critical files that kpathsea needs to find
+        return path.endsWith('.fmt') ||
+               path.endsWith('texmf.cnf') ||
+               path.endsWith('.map') ||
+               path.endsWith('.pfb') ||  // Type1 fonts - needed by pdfTeX
+               path.endsWith('.enc');    // Encoding files - needed by pdfTeX
+    }
+
+    _trackFontFile(path) {
+        // Track font maps for later processing (append to pdftex.map)
+        // Only called for CTAN packages - bundles pass trackFontMaps=false
+        if (path.endsWith('.map') && !path.endsWith('pdftex.map')) {
+            this.pendingFontMaps.add(path);
+        }
+    }
+
+    _decodeBase64(base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+    }
+}
+
+function configureTexEnvironment(ENV) {
+    ENV['TEXMFCNF'] = '/texlive/texmf-dist/web2c';
+    ENV['TEXMFROOT'] = '/texlive';
+    ENV['TEXMFDIST'] = '/texlive/texmf-dist';
+    ENV['TEXMFVAR'] = '/texlive/texmf-dist/texmf-var';
+    ENV['TEXMFSYSVAR'] = '/texlive/texmf-dist/texmf-var';
+    ENV['TEXMFSYSCONFIG'] = '/texlive/texmf-dist';
+    ENV['TEXMFLOCAL'] = '/texlive/texmf-dist';
+    ENV['TEXMFHOME'] = '/texlive/texmf-dist';
+    ENV['TEXMFCONFIG'] = '/texlive/texmf-dist';
+    ENV['TEXMFAUXTREES'] = '';
+    ENV['TEXMF'] = '/texlive/texmf-dist';
+    ENV['TEXMFDOTDIR'] = '.';
+    ENV['TEXINPUTS'] = '.:/texlive/texmf-dist/tex/latex//:/texlive/texmf-dist/tex/generic//:/texlive/texmf-dist/tex//:';
+    ENV['T1FONTS'] = '.:/texlive/texmf-dist/fonts/type1//';
+    ENV['ENCFONTS'] = '.:/texlive/texmf-dist/fonts/enc//';
+    ENV['TFMFONTS'] = '.:/texlive/texmf-dist/fonts/tfm//';
+    ENV['VFFONTS'] = '.:/texlive/texmf-dist/fonts/vf//';
+    ENV['TEXFONTMAPS'] = '.:/texlive/texmf-dist/fonts/map/dvips//:/texlive/texmf-dist/fonts/map/pdftex//:/texlive/texmf-dist/texmf-var/fonts/map//';
+    ENV['TEXPSHEADERS'] = '.:/texlive/texmf-dist/dvips//:/texlive/texmf-dist/fonts/enc//:/texlive/texmf-dist/fonts/type1//:/texlive/texmf-dist/fonts/type42//';
+}
+
+// ============ Worker Code ============
 
 const BUNDLE_BASE = 'packages/bundles';
 
@@ -10,18 +377,10 @@ let fileManifest = null;
 let packageMap = null;
 let bundleDeps = null;
 let bundleRegistry = null;
-let bundleCache = new Map();
-let mountedBundles = new Set();
-let dirNodeCache = new Map();
-let ctanMountedFiles = new Set();
-let lazyLoadCount = 0;
 
-// Cached manifest index
-let cachedBundleFilesMap = null;
-let cachedManifestSize = 0;
-
-// Pending CTAN fetch requests
+// Pending requests
 const pendingCtanRequests = new Map();
+const pendingBundleRequests = new Map();
 
 function workerLog(msg) {
     self.postMessage({ type: 'log', message: msg });
@@ -31,7 +390,8 @@ function workerProgress(stage, detail) {
     self.postMessage({ type: 'progress', stage, detail });
 }
 
-// Request CTAN package from main thread
+// ============ External Fetch Requests ============
+
 function requestCtanFetch(packageName) {
     return new Promise((resolve, reject) => {
         const requestId = crypto.randomUUID();
@@ -52,101 +412,27 @@ function requestCtanFetch(packageName) {
     });
 }
 
-// Helper: ensure directory exists
-function ensureDirectory(FS, dirPath) {
-    const parts = dirPath.split('/').filter(p => p);
-    let current = '';
-    for (const part of parts) {
-        current += '/' + part;
-        try {
-            FS.stat(current);
-        } catch (e) {
-            try {
-                FS.mkdir(current);
-            } catch (e2) {}
-        }
-    }
+function requestBundleFetch(bundleName) {
+    return new Promise((resolve, reject) => {
+        const requestId = crypto.randomUUID();
+        pendingBundleRequests.set(requestId, { resolve, reject });
+
+        self.postMessage({
+            type: 'bundle-fetch-request',
+            requestId,
+            bundleName,
+        });
+
+        setTimeout(() => {
+            if (pendingBundleRequests.has(requestId)) {
+                pendingBundleRequests.delete(requestId);
+                reject(new Error('Bundle fetch timeout'));
+            }
+        }, 60000);
+    });
 }
 
-// Lazy content marker
-const LAZY_MARKER_SYMBOL = '__siglum_lazy__';
-
-function createLazyMarker(bundleName, start, end) {
-    return {
-        [LAZY_MARKER_SYMBOL]: true,
-        bundleName,
-        start,
-        end,
-        length: end - start,
-        byteLength: end - start
-    };
-}
-
-function isLazyMarker(obj) {
-    return obj && typeof obj === 'object' && obj[LAZY_MARKER_SYMBOL] === true;
-}
-
-function resolveLazyContent(marker) {
-    const bundleData = bundleCache.get(marker.bundleName);
-    if (!bundleData) {
-        workerLog('ERROR: Bundle not in cache: ' + marker.bundleName);
-        return new Uint8Array(0);
-    }
-    lazyLoadCount++;
-    if (lazyLoadCount <= 5) {
-        workerLog('Lazy resolved #' + lazyLoadCount + ' from ' + marker.bundleName + ' (' + (marker.end - marker.start) + ' bytes)');
-    }
-    return new Uint8Array(bundleData.slice(marker.start, marker.end));
-}
-
-// Patch MEMFS for lazy loading
-function patchMEMFSForLazyLoading(FS) {
-    const MEMFS = FS.filesystems.MEMFS;
-    if (!MEMFS || !MEMFS.stream_ops) {
-        workerLog('WARNING: Cannot patch MEMFS');
-        return false;
-    }
-
-    function ensureResolved(node) {
-        if (isLazyMarker(node.contents)) {
-            const resolved = resolveLazyContent(node.contents);
-            node.contents = resolved;
-            node.usedBytes = resolved.length;
-        }
-    }
-
-    const originalRead = MEMFS.stream_ops.read;
-    MEMFS.stream_ops.read = function(stream, buffer, offset, length, position) {
-        ensureResolved(stream.node);
-        return originalRead.call(this, stream, buffer, offset, length, position);
-    };
-
-    if (MEMFS.ops_table?.file?.stream?.read) {
-        const originalTableRead = MEMFS.ops_table.file.stream.read;
-        MEMFS.ops_table.file.stream.read = function(stream, buffer, offset, length, position) {
-            ensureResolved(stream.node);
-            return originalTableRead.call(this, stream, buffer, offset, length, position);
-        };
-    }
-
-    if (MEMFS.stream_ops.mmap) {
-        const originalMmap = MEMFS.stream_ops.mmap;
-        MEMFS.stream_ops.mmap = function(stream, length, position, prot, flags) {
-            ensureResolved(stream.node);
-            return originalMmap.call(this, stream, length, position, prot, flags);
-        };
-    }
-
-    workerLog('MEMFS patched for lazy loading');
-    return true;
-}
-
-function shouldEagerLoad(path) {
-    if (path.endsWith('.fmt')) return true;
-    if (path.endsWith('texmf.cnf')) return true;
-    if (path.endsWith('.map')) return true;
-    return false;
-}
+// ============ Source Processing ============
 
 function injectMicrotypeWorkaround(source) {
     if (!source.includes('microtype')) return source;
@@ -165,192 +451,17 @@ function injectPdfMapFileCommands(source, mapFilePaths) {
 
     const mapCommands = newMaps.map(p => '\\pdfmapfile{+' + p + '}').join('\n');
     const documentclassMatch = source.match(/\\documentclass(\[[^\]]*\])?\{[^}]+\}/);
-    const beginDocMatch = source.match(/\\begin\{document\}/);
 
-    let insertPos;
     if (documentclassMatch) {
-        insertPos = documentclassMatch.index + documentclassMatch[0].length;
-    } else if (beginDocMatch) {
-        insertPos = beginDocMatch.index + beginDocMatch[0].length;
-    } else {
-        return source;
+        const insertPos = documentclassMatch.index + documentclassMatch[0].length;
+        const preambleInsert = '\n% Font maps injected by Siglum\n' + mapCommands + '\n';
+        workerLog('Injecting ' + newMaps.length + ' \\pdfmapfile commands');
+        return source.slice(0, insertPos) + preambleInsert + source.slice(insertPos);
     }
-
-    const preambleInsert = '\n% Font maps injected by Siglum\n' + mapCommands + '\n';
-    workerLog('Injecting ' + newMaps.length + ' \\pdfmapfile commands');
-    return source.slice(0, insertPos) + preambleInsert + source.slice(insertPos);
+    return source;
 }
 
-function generateLsR(FS, basePath) {
-    const dirContents = new Map();
-    const seenDirs = new Set();
-    dirContents.set(basePath, { files: [], subdirs: [] });
-
-    function getDir(dirPath) {
-        if (!dirContents.has(dirPath)) {
-            dirContents.set(dirPath, { files: [], subdirs: [] });
-        }
-        return dirContents.get(dirPath);
-    }
-
-    function ensureDirChain(dirPath) {
-        if (seenDirs.has(dirPath) || dirPath.length <= basePath.length) return;
-        seenDirs.add(dirPath);
-        getDir(dirPath);
-        const parentSlash = dirPath.lastIndexOf('/');
-        if (parentSlash > basePath.length) {
-            const parentDir = dirPath.substring(0, parentSlash);
-            const subdir = dirPath.substring(parentSlash + 1);
-            ensureDirChain(parentDir);
-            getDir(parentDir).subdirs.push(subdir);
-        } else if (parentSlash >= 0) {
-            const subdir = dirPath.substring(parentSlash + 1);
-            getDir(basePath).subdirs.push(subdir);
-        }
-    }
-
-    for (const path of Object.keys(fileManifest)) {
-        if (!path.startsWith(basePath)) continue;
-        const lastSlash = path.lastIndexOf('/');
-        if (lastSlash < 0) continue;
-        const dirPath = path.substring(0, lastSlash);
-        const fileName = path.substring(lastSlash + 1);
-        if (!dirPath || !fileName) continue;
-        ensureDirChain(dirPath);
-        const dir = getDir(dirPath);
-        if (dir?.files) dir.files.push(fileName);
-    }
-
-    for (const path of ctanMountedFiles) {
-        if (!path.startsWith(basePath)) continue;
-        const lastSlash = path.lastIndexOf('/');
-        if (lastSlash < 0) continue;
-        const dirPath = path.substring(0, lastSlash);
-        const fileName = path.substring(lastSlash + 1);
-        if (!dirPath || !fileName) continue;
-        ensureDirChain(dirPath);
-        const dir = getDir(dirPath);
-        if (dir?.files) dir.files.push(fileName);
-    }
-
-    const output = ['% ls-R -- filename database.', '% Created by Siglum worker', ''];
-
-    function outputDir(dirPath) {
-        const contents = dirContents.get(dirPath);
-        if (!contents) return;
-        output.push(dirPath + ':');
-        contents.files.sort();
-        contents.subdirs.sort();
-        for (const file of contents.files) output.push(file);
-        for (const subdir of contents.subdirs) output.push(subdir);
-        output.push('');
-        for (const subdir of contents.subdirs) {
-            outputDir(dirPath + '/' + subdir);
-        }
-    }
-
-    outputDir(basePath);
-    return output.join('\n');
-}
-
-function mountBundleLazy(FS, bundleName, bundleData, manifest, bundleFilesMap) {
-    if (mountedBundles.has(bundleName)) return 0;
-    bundleCache.set(bundleName, bundleData);
-    const MEMFS = FS.filesystems.MEMFS;
-
-    let bundleFiles;
-    if (bundleFilesMap?.has(bundleName)) {
-        bundleFiles = bundleFilesMap.get(bundleName);
-    } else {
-        bundleFiles = [];
-        for (const [path, info] of Object.entries(manifest)) {
-            if (info.bundle === bundleName) bundleFiles.push([path, info]);
-        }
-    }
-
-    const directories = new Set();
-    for (const [filePath] of bundleFiles) {
-        const lastSlash = filePath.lastIndexOf('/');
-        if (lastSlash > 0) directories.add(filePath.substring(0, lastSlash));
-    }
-    for (const dirPath of directories) ensureDirectory(FS, dirPath);
-
-    const parentCache = new Map();
-    for (const dirPath of directories) {
-        try {
-            parentCache.set(dirPath, FS.lookupPath(dirPath).node);
-        } catch (e) {}
-    }
-
-    let mounted = 0;
-    for (const [filePath, info] of bundleFiles) {
-        const lastSlash = filePath.lastIndexOf('/');
-        const dirPath = filePath.substring(0, lastSlash);
-        const fileName = filePath.substring(lastSlash + 1);
-
-        try {
-            const parentNode = parentCache.get(dirPath);
-            if (!parentNode) continue;
-            if (parentNode.contents?.[fileName]) continue;
-
-            if (shouldEagerLoad(filePath)) {
-                const content = new Uint8Array(bundleData.slice(info.start, info.end));
-                FS.writeFile(filePath, content);
-            } else {
-                const node = MEMFS.createNode(parentNode, fileName, 33206, 0);
-                node.contents = createLazyMarker(bundleName, info.start, info.end);
-                node.usedBytes = info.end - info.start;
-            }
-            mounted++;
-        } catch (e) {}
-    }
-
-    mountedBundles.add(bundleName);
-    return mounted;
-}
-
-function mountBundleEager(FS, bundleName, bundleData, manifest) {
-    if (mountedBundles.has(bundleName)) return 0;
-    let mounted = 0;
-
-    for (const [filePath, info] of Object.entries(manifest)) {
-        if (info.bundle !== bundleName) continue;
-        const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
-        ensureDirectory(FS, dirPath);
-        try {
-            try { FS.stat(filePath); continue; } catch (e) {}
-            const content = new Uint8Array(bundleData.slice(info.start, info.end));
-            FS.writeFile(filePath, content);
-            mounted++;
-        } catch (e) {}
-    }
-
-    mountedBundles.add(bundleName);
-    return mounted;
-}
-
-function collectAuxFiles(FS) {
-    const auxExtensions = ['.aux', '.toc', '.lof', '.lot', '.out', '.nav', '.snm', '.bbl', '.blg'];
-    const files = {};
-    for (const ext of auxExtensions) {
-        const path = '/document' + ext;
-        try {
-            files[ext] = FS.readFile(path, { encoding: 'utf8' });
-        } catch (e) {}
-    }
-    return files;
-}
-
-function restoreAuxFiles(FS, auxFiles) {
-    let restored = 0;
-    for (const [ext, content] of Object.entries(auxFiles)) {
-        try {
-            FS.writeFile('/document' + ext, content);
-            restored++;
-        } catch (e) {}
-    }
-    return restored;
-}
+// ============ Missing File Detection ============
 
 function extractMissingFile(logContent, alreadyFetched) {
     const patterns = [
@@ -386,115 +497,35 @@ function getPackageFromFile(filename) {
     return filename.replace(/\.(sty|cls|def|clo|fd|cfg|tex)$/, '');
 }
 
-function copyEncFilesToStandardLocation(FS, files) {
-    const ENC_STANDARD_BASE = '/texlive/texmf-dist/fonts/enc/dvips';
-    const encInType1 = Object.keys(files).filter(path =>
-        path.endsWith('.enc') && path.includes('/fonts/type1/')
-    );
-    if (encInType1.length === 0) return;
+// ============ Aux File Handling ============
 
-    let copied = 0;
-    for (const srcPath of encInType1) {
+function collectAuxFiles(FS) {
+    const auxExtensions = ['.aux', '.toc', '.lof', '.lot', '.out', '.nav', '.snm', '.bbl', '.blg'];
+    const files = {};
+    for (const ext of auxExtensions) {
+        const path = '/document' + ext;
         try {
-            const match = srcPath.match(/\/fonts\/type1\/public\/([^/]+)\//);
-            if (!match) continue;
-            const pkgName = match[1];
-            const fileName = srcPath.split('/').pop();
-            const destDir = ENC_STANDARD_BASE + '/' + pkgName;
-            const destPath = destDir + '/' + fileName;
-            ensureDirectory(FS, destDir);
-            const content = FS.readFile(srcPath);
-            FS.writeFile(destPath, content);
-            ctanMountedFiles.add(destPath);
-            copied++;
+            files[ext] = FS.readFile(path, { encoding: 'utf8' });
         } catch (e) {}
     }
-    if (copied > 0) workerLog('Copied ' + copied + ' .enc files to standard location');
+    return files;
 }
 
-function rewriteMapWithAbsolutePaths(FS, mapContent, mapFilePath) {
-    const lines = mapContent.split('\n');
-    const rewrittenLines = [];
-    const mapDir = mapFilePath.substring(0, mapFilePath.lastIndexOf('/'));
-    const packageName = mapFilePath.includes('/cm-super') ? 'cm-super' :
-                       (mapFilePath.match(/\/([^\/]+)\/[^\/]+\.map$/) || [])[1] || '';
-
-    const searchPaths = {
-        pfb: [
-            '/texlive/texmf-dist/fonts/type1/public/' + packageName,
-            '/texlive/texmf-dist/fonts/type1/public/cm-super',
-            mapDir
-        ],
-        enc: [
-            '/texlive/texmf-dist/fonts/enc/dvips/' + packageName,
-            '/texlive/texmf-dist/fonts/enc/dvips/cm-super',
-            '/texlive/texmf-dist/fonts/type1/public/' + packageName,
-            mapDir
-        ]
-    };
-
-    for (const line of lines) {
-        if (line.trim().startsWith('%') || line.trim() === '') {
-            rewrittenLines.push(line);
-            continue;
-        }
-
-        let rewrittenLine = line;
-        const fileRefPattern = /<<?([a-zA-Z0-9_-]+\.(pfb|enc))/g;
-        let match;
-        while ((match = fileRefPattern.exec(line)) !== null) {
-            const fullMatch = match[0];
-            const filename = match[1];
-            const ext = match[2];
-            const prefix = fullMatch.startsWith('<<') ? '<<' : '<';
-            const paths = searchPaths[ext] || [];
-
-            for (const searchDir of paths) {
-                const candidatePath = searchDir + '/' + filename;
-                try {
-                    if (FS.analyzePath(candidatePath).exists) {
-                        rewrittenLine = rewrittenLine.replace(fullMatch, prefix + candidatePath);
-                        break;
-                    }
-                } catch (e) {}
-            }
-        }
-        rewrittenLines.push(rewrittenLine);
-    }
-
-    return rewrittenLines.join('\n');
-}
-
-function appendFontMapsToUpdmap(FS, files) {
-    const PDFTEX_MAP_PATH = '/texlive/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map';
-    const mapFiles = Object.keys(files).filter(p => p.endsWith('.map') && !p.endsWith('pdftex.map'));
-    if (mapFiles.length === 0) return;
-
-    let existingMap = '';
-    try {
-        existingMap = new TextDecoder().decode(FS.readFile(PDFTEX_MAP_PATH));
-    } catch (e) {
-        ensureDirectory(FS, PDFTEX_MAP_PATH.substring(0, PDFTEX_MAP_PATH.lastIndexOf('/')));
-    }
-
-    let appended = 0;
-    for (const mapPath of mapFiles) {
+function restoreAuxFiles(FS, auxFiles) {
+    let restored = 0;
+    for (const [ext, content] of Object.entries(auxFiles)) {
         try {
-            const mapContent = new TextDecoder().decode(FS.readFile(mapPath));
-            const rewrittenContent = rewriteMapWithAbsolutePaths(FS, mapContent, mapPath);
-            existingMap += '\n% Added from ' + mapPath + '\n' + rewrittenContent + '\n';
-            appended++;
+            FS.writeFile('/document' + ext, content);
+            restored++;
         } catch (e) {}
     }
-
-    if (appended > 0) {
-        FS.writeFile(PDFTEX_MAP_PATH, existingMap);
-        workerLog('Appended ' + appended + ' font map files to pdftex.map');
-    }
+    return restored;
 }
+
+// ============ WASM Initialization ============
 
 async function initBusyTeX(wasmModule, jsUrl) {
-    workerLog('Initializing WASM in worker...');
+    workerLog('Initializing WASM...');
     const startTime = performance.now();
     importScripts(jsUrl);
 
@@ -508,20 +539,25 @@ async function initBusyTeX(wasmModule, jsUrl) {
             });
             return {};
         },
-        print: (text) => workerLog('[TeX] ' + text),
-        printErr: (text) => workerLog('[TeX ERR] ' + text),
+        print: (text) => {
+            // Suppress noisy font map warnings
+            if (text.includes('ambiguous entry') ||
+                text.includes('duplicates ignored') ||
+                text.includes('will be treated as font file not present') ||
+                text.includes('font file present but not included') ||
+                text.includes('invalid entry for') ||
+                text.includes('SlantFont/ExtendFont')) return;
+            workerLog('[TeX] ' + text);
+        },
+        printErr: (text) => {
+            // Suppress font generation attempts (not supported in WASM)
+            if (text.includes('mktexpk') || text.includes('kpathsea: fork')) return;
+            workerLog('[TeX ERR] ' + text);
+        },
         locateFile: (path) => path,
         preRun: [function() {
             moduleConfig.ENV = moduleConfig.ENV || {};
-            moduleConfig.ENV['TEXMFCNF'] = '/texlive/texmf-dist/web2c';
-            moduleConfig.ENV['TEXMFROOT'] = '/texlive';
-            moduleConfig.ENV['TEXMFDIST'] = '/texlive/texmf-dist';
-            moduleConfig.ENV['TEXMFVAR'] = '/texlive/texmf-dist/texmf-var';
-            moduleConfig.ENV['TEXMFSYSVAR'] = '/texlive/texmf-dist/texmf-var';
-            moduleConfig.ENV['TEXMF'] = '/texlive/texmf-dist';
-            moduleConfig.ENV['TEXINPUTS'] = '.:/texlive/texmf-dist/tex/latex//:/texlive/texmf-dist/tex/xetex//:/texlive/texmf-dist/tex/generic//:/texlive/texmf-dist/tex//:';
-            moduleConfig.ENV['T1FONTS'] = '.:/texlive/texmf-dist/fonts/type1/public/cm-super:/texlive/texmf-dist/fonts/type1//';
-            moduleConfig.ENV['ENCFONTS'] = '.:/texlive/texmf-dist/fonts/enc/dvips/cm-super:/texlive/texmf-dist/fonts/type1/public/cm-super:/texlive/texmf-dist/fonts/enc//';
+            configureTexEnvironment(moduleConfig.ENV);
         }],
     };
 
@@ -544,172 +580,106 @@ async function initBusyTeX(wasmModule, jsUrl) {
         return { exit_code, stdout: Module.output_stdout, stderr: Module.output_stderr };
     };
 
-    workerLog('WASM initialized in ' + (performance.now() - startTime).toFixed(0) + 'ms');
+    workerLog('WASM ready in ' + (performance.now() - startTime).toFixed(0) + 'ms');
     return Module;
 }
+
+// ============ Compilation ============
 
 async function handleCompile(request) {
     const { id, source, engine, options, bundleData, ctanFiles, cachedFormat, cachedAuxFiles } = request;
 
-    workerLog('=== Worker Compilation Started ===');
+    workerLog('=== Compilation Started ===');
     const totalStart = performance.now();
-
-    mountedBundles.clear();
-    dirNodeCache.clear();
-    ctanMountedFiles.clear();
-    lazyLoadCount = 0;
 
     if (!fileManifest) throw new Error('fileManifest not set');
 
-    try {
-        workerProgress('init', 'Initializing WASM...');
-        let Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
-        let FS = Module.FS;
+    // Track accumulated resources across retries
+    const bundleDataMap = bundleData instanceof Map ? bundleData : new Map(Object.entries(bundleData));
+    const bundleMetaMap = new Map(); // Store bundle metadata for dynamically loaded bundles
+    const accumulatedCtanFiles = new Map();
 
-        if (options.enableLazyFS) patchMEMFSForLazyLoading(FS);
+    if (ctanFiles) {
+        const ctanFilesMap = ctanFiles instanceof Map ? ctanFiles : new Map(Object.entries(ctanFiles));
+        for (const [path, content] of ctanFilesMap) accumulatedCtanFiles.set(path, content);
+    }
 
-        workerProgress('mount', 'Mounting bundles...');
-        const bundleDataMap = bundleData instanceof Map ? bundleData : new Map(Object.entries(bundleData));
+    let pdfData = null;
+    let compileSuccess = false;
+    let retryCount = 0;
+    const maxRetries = 10;
+    const fetchedPackages = new Set();
+    let lastExitCode = -1;
+    let Module = null;
+    let FS = null;
 
-        const manifestSize = Object.keys(fileManifest).length;
-        if (!cachedBundleFilesMap || cachedManifestSize !== manifestSize) {
-            cachedBundleFilesMap = new Map();
-            for (const [path, info] of Object.entries(fileManifest)) {
-                if (!cachedBundleFilesMap.has(info.bundle)) cachedBundleFilesMap.set(info.bundle, []);
-                cachedBundleFilesMap.get(info.bundle).push([path, info]);
-            }
-            cachedManifestSize = manifestSize;
+    while (!compileSuccess && retryCount < maxRetries) {
+        if (retryCount > 0) {
+            workerLog(`Retry #${retryCount}...`);
         }
 
-        const mountStart = performance.now();
-        let totalMounted = 0;
-        for (const [bundleName, data] of bundleDataMap) {
+        try {
+            // Initialize fresh WASM instance
+            Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
+            FS = Module.FS;
+
+            // Create VFS with unified mount handling
+            const vfs = new VirtualFileSystem(FS, {
+                onLog: workerLog,
+                lazyEnabled: options.enableLazyFS
+            });
+
             if (options.enableLazyFS) {
-                totalMounted += mountBundleLazy(FS, bundleName, data, fileManifest, cachedBundleFilesMap);
-            } else {
-                totalMounted += mountBundleEager(FS, bundleName, data, fileManifest);
-            }
-        }
-        workerLog('Mounted ' + totalMounted + ' files in ' + (performance.now() - mountStart).toFixed(0) + 'ms');
-
-        let ctanMounted = 0;
-        const ctanFileObj = {};
-        if (ctanFiles) {
-            const ctanFilesMap = ctanFiles instanceof Map ? ctanFiles : new Map(Object.entries(ctanFiles));
-            for (const [filePath, content] of ctanFilesMap) {
-                if (fileManifest[filePath]) continue;
-                const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
-                ensureDirectory(FS, dirPath);
-                try {
-                    FS.writeFile(filePath, content);
-                    ctanMountedFiles.add(filePath);
-                    ctanFileObj[filePath] = true;
-                    ctanMounted++;
-                } catch (e) {}
-            }
-        }
-        if (ctanMounted > 0) {
-            workerLog('Mounted ' + ctanMounted + ' CTAN files');
-            appendFontMapsToUpdmap(FS, ctanFileObj);
-            copyEncFilesToStandardLocation(FS, ctanFileObj);
-        }
-
-        if (cachedAuxFiles && Object.keys(cachedAuxFiles).length > 0) {
-            const restored = restoreAuxFiles(FS, cachedAuxFiles);
-            if (restored > 0) workerLog('Restored ' + restored + ' aux files');
-        }
-
-        const lsRContent = generateLsR(FS, '/texlive/texmf-dist');
-        FS.writeFile('/texlive/texmf-dist/ls-R', lsRContent);
-
-        let fmtPath = engine === 'pdflatex'
-            ? '/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex.fmt'
-            : '/texlive/texmf-dist/texmf-var/web2c/xetex/xelatex.fmt';
-
-        let docSource = source;
-        if (cachedFormat && engine === 'pdflatex') {
-            FS.writeFile('/custom.fmt', cachedFormat.fmtData);
-            fmtPath = '/custom.fmt';
-            workerLog('Using custom format');
-            const beginDocIdx = source.indexOf('\\begin{document}');
-            if (beginDocIdx !== -1) docSource = source.substring(beginDocIdx);
-        }
-
-        if (engine === 'pdflatex') {
-            if (!cachedFormat) docSource = injectMicrotypeWorkaround(docSource);
-            const baseMaps = [
-                '/texlive/texmf-dist/fonts/map/dvips/amsfonts/cm.map',
-                '/texlive/texmf-dist/fonts/map/dvips/amsfonts/cmextra.map',
-                '/texlive/texmf-dist/fonts/map/dvips/amsfonts/symbols.map',
-            ];
-            const existingMaps = baseMaps.filter(m => FS.analyzePath(m).exists);
-            if (existingMaps.length > 0) {
-                docSource = injectPdfMapFileCommands(docSource, existingMaps);
-                const baseMapsObj = {};
-                for (const m of existingMaps) baseMapsObj[m] = true;
-                appendFontMapsToUpdmap(FS, baseMapsObj);
-            }
-        }
-
-        FS.writeFile('/document.tex', docSource);
-        workerProgress('compile', 'Running ' + engine + '...');
-
-        let pdfData = null;
-        let compileSuccess = false;
-        let retryCount = 0;
-        const maxRetries = 10;
-        const ctanFetched = new Set();
-        let lastExitCode = -1;
-        const accumulatedCtanFiles = new Map();
-
-        if (ctanFiles) {
-            const ctanFilesMap = ctanFiles instanceof Map ? ctanFiles : new Map(Object.entries(ctanFiles));
-            for (const [path, content] of ctanFilesMap) accumulatedCtanFiles.set(path, content);
-        }
-
-        while (!compileSuccess && retryCount < maxRetries) {
-            if (retryCount > 0) {
-                workerLog('Retry #' + retryCount + '...');
-                Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
-                FS = Module.FS;
-                if (options.enableLazyFS) patchMEMFSForLazyLoading(FS);
-
-                mountedBundles.clear();
-                bundleCache.clear();
-                for (const [bundleName, data] of bundleDataMap) {
-                    if (options.enableLazyFS) {
-                        mountBundleLazy(FS, bundleName, data, fileManifest, cachedBundleFilesMap);
-                    } else {
-                        mountBundleEager(FS, bundleName, data, fileManifest);
-                    }
-                }
-
-                ctanMountedFiles.clear();
-                const retryCtanObj = {};
-                for (const [path, content] of accumulatedCtanFiles) {
-                    if (fileManifest[path]) continue;
-                    ensureDirectory(FS, path.substring(0, path.lastIndexOf('/')));
-                    try {
-                        FS.writeFile(path, content);
-                        ctanMountedFiles.add(path);
-                        retryCtanObj[path] = true;
-                    } catch (e) {}
-                }
-                appendFontMapsToUpdmap(FS, retryCtanObj);
-                copyEncFilesToStandardLocation(FS, retryCtanObj);
-
-                if (cachedAuxFiles) restoreAuxFiles(FS, cachedAuxFiles);
-                FS.writeFile('/texlive/texmf-dist/ls-R', generateLsR(FS, '/texlive/texmf-dist'));
-                if (cachedFormat && fmtPath === '/custom.fmt') FS.writeFile('/custom.fmt', cachedFormat.fmtData);
-
-                const mapFilesInObj = Object.keys(retryCtanObj).filter(p => p.endsWith('.map'));
-                if (mapFilesInObj.length > 0 && engine === 'pdflatex') {
-                    docSource = injectPdfMapFileCommands(docSource, mapFilesInObj);
-                }
-                FS.writeFile('/document.tex', docSource);
+                vfs.patchForLazyLoading();
             }
 
+            // Mount all bundles
+            workerProgress('mount', 'Mounting files...');
+            for (const [bundleName, data] of bundleDataMap) {
+                const meta = bundleMetaMap.get(bundleName) || null;
+                vfs.mountBundle(bundleName, data, fileManifest, meta);
+            }
+
+            // Mount CTAN files
+            if (accumulatedCtanFiles.size > 0) {
+                vfs.mountCtanFiles(accumulatedCtanFiles);
+            }
+
+            // Restore aux files
+            if (cachedAuxFiles && Object.keys(cachedAuxFiles).length > 0) {
+                const restored = restoreAuxFiles(FS, cachedAuxFiles);
+                if (restored > 0) workerLog(`Restored ${restored} aux files`);
+            }
+
+            // Finalize VFS - processes font maps, generates ls-R
+            vfs.finalize();
+
+            // Prepare document source
+            let docSource = source;
+            let fmtPath = engine === 'pdflatex'
+                ? '/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex.fmt'
+                : '/texlive/texmf-dist/texmf-var/web2c/xetex/xelatex.fmt';
+
+            if (cachedFormat && engine === 'pdflatex') {
+                FS.writeFile('/custom.fmt', cachedFormat.fmtData);
+                fmtPath = '/custom.fmt';
+                workerLog('Using custom format');
+                const beginDocIdx = source.indexOf('\\begin{document}');
+                if (beginDocIdx !== -1) docSource = source.substring(beginDocIdx);
+            }
+
+            if (engine === 'pdflatex' && !cachedFormat) {
+                docSource = injectMicrotypeWorkaround(docSource);
+            }
+
+            // Font maps are now handled by VFS.processFontMaps() - no need to inject \pdfmapfile commands
+
+            FS.writeFile('/document.tex', docSource);
+
+            // Run compilation
+            workerProgress('compile', `Running ${engine}...`);
             let result;
+
             if (engine === 'pdflatex') {
                 result = Module.callMainWithRedirects([
                     'pdflatex', '--no-shell-escape', '--interaction=nonstopmode',
@@ -736,57 +706,86 @@ async function handleCompile(request) {
                     pdfData = FS.readFile('/document.pdf');
                     compileSuccess = true;
                     workerLog('Compilation successful!');
-                } catch (e) {}
+                } catch (e) {
+                    workerLog('Failed to read PDF: ' + e.message);
+                }
             }
 
+            // Handle missing files
             if (!compileSuccess && options.enableCtan) {
                 let logContent = '';
                 try { logContent = new TextDecoder().decode(FS.readFile('/document.log')); } catch (e) {}
                 const allOutput = logContent + ' ' + (result.stdout || '') + ' ' + (result.stderr || '');
-                const missingFile = extractMissingFile(allOutput, ctanFetched);
+                const missingFile = extractMissingFile(allOutput, fetchedPackages);
 
                 if (missingFile) {
                     const pkgName = getPackageFromFile(missingFile);
-                    workerLog('Missing: ' + missingFile + ', fetching ' + pkgName + ' from CTAN...');
+
+                    // Try bundle first (compressed, fast)
+                    const bundleName = packageMap?.[pkgName];
+                    if (bundleName && !bundleDataMap.has(bundleName)) {
+                        workerLog(`Missing: ${missingFile}, loading bundle ${bundleName}...`);
+                        try {
+                            const bundleResult = await requestBundleFetch(bundleName);
+                            if (bundleResult.success) {
+                                fetchedPackages.add(pkgName);
+                                bundleDataMap.set(bundleName, bundleResult.bundleData);
+                                if (bundleResult.bundleMeta) {
+                                    bundleMetaMap.set(bundleName, bundleResult.bundleMeta);
+                                }
+                                retryCount++;
+                                continue;
+                            }
+                        } catch (e) {
+                            workerLog(`Bundle fetch failed: ${e.message}, trying CTAN...`);
+                        }
+                    }
+
+                    // Fall back to CTAN
+                    workerLog(`Missing: ${missingFile}, fetching ${pkgName} from CTAN...`);
                     try {
                         const ctanData = await requestCtanFetch(pkgName);
                         if (ctanData.success) {
-                            ctanFetched.add(pkgName);
+                            fetchedPackages.add(pkgName);
                             const files = ctanData.files instanceof Map ? ctanData.files : new Map(Object.entries(ctanData.files));
-                            for (const [path, content] of files) accumulatedCtanFiles.set(path, content);
+                            for (const [path, content] of files) {
+                                accumulatedCtanFiles.set(path, content);
+                            }
                             retryCount++;
                             continue;
                         }
                     } catch (e) {
-                        workerLog('CTAN fetch failed: ' + e.message);
+                        workerLog(`CTAN fetch failed: ${e.message}`);
                     }
                 }
-                break;
-            } else if (!compileSuccess) {
-                break;
             }
+
+            // No more retries possible
+            if (!compileSuccess) break;
+
+        } catch (e) {
+            workerLog(`Error: ${e.message}`);
+            break;
         }
-
-        const auxFiles = compileSuccess ? collectAuxFiles(FS) : null;
-        const totalTime = performance.now() - totalStart;
-        workerLog('Total time: ' + totalTime.toFixed(0) + 'ms');
-
-        const transferables = pdfData ? [pdfData.buffer] : [];
-        self.postMessage({
-            type: 'compile-response',
-            id,
-            success: compileSuccess,
-            pdfData: pdfData ? pdfData.buffer : null,
-            exitCode: lastExitCode,
-            auxFilesToCache: auxFiles,
-            stats: { compileTimeMs: totalTime, lazyLoadCount, bundlesUsed: [...bundleDataMap.keys()] }
-        }, transferables);
-
-    } catch (e) {
-        workerLog('Error: ' + e.message);
-        self.postMessage({ type: 'compile-response', id, success: false, exitCode: -1, error: e.message });
     }
+
+    const auxFiles = compileSuccess ? collectAuxFiles(FS) : null;
+    const totalTime = performance.now() - totalStart;
+    workerLog(`Total time: ${totalTime.toFixed(0)}ms`);
+
+    const transferables = pdfData ? [pdfData.buffer] : [];
+    self.postMessage({
+        type: 'compile-response',
+        id,
+        success: compileSuccess,
+        pdfData: pdfData ? pdfData.buffer : null,
+        exitCode: lastExitCode,
+        auxFilesToCache: auxFiles,
+        stats: { compileTimeMs: totalTime, bundlesUsed: [...bundleDataMap.keys()] }
+    }, transferables);
 }
+
+// ============ Format Generation ============
 
 async function handleFormatGenerate(request) {
     const { id, preambleContent, engine, manifest, packageMapData, bundleDepsData, bundleRegistryData, bundleData, ctanFiles } = request;
@@ -794,17 +793,15 @@ async function handleFormatGenerate(request) {
     workerLog('=== Format Generation Started ===');
     const startTime = performance.now();
 
-    mountedBundles.clear();
-    ctanMountedFiles.clear();
     fileManifest = manifest;
     packageMap = packageMapData;
     bundleDeps = bundleDepsData;
     bundleRegistry = new Set(bundleRegistryData);
 
     const bundleDataMap = bundleData instanceof Map ? bundleData : new Map(Object.entries(bundleData));
+    const bundleMetaMap = new Map(); // Store bundle metadata for dynamically loaded bundles
     const accumulatedCtanFiles = new Map();
 
-    // Initialize with provided CTAN files
     if (ctanFiles) {
         const ctanFilesMap = ctanFiles instanceof Map ? ctanFiles : new Map(Object.entries(ctanFiles));
         for (const [path, content] of ctanFilesMap) accumulatedCtanFiles.set(path, content);
@@ -812,32 +809,26 @@ async function handleFormatGenerate(request) {
 
     let retryCount = 0;
     const maxRetries = 10;
-    const ctanFetched = new Set();
+    const fetchedPackages = new Set();
 
     while (retryCount < maxRetries) {
         try {
             const Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
             const FS = Module.FS;
 
-            mountedBundles.clear();
-            bundleCache.clear();
+            const vfs = new VirtualFileSystem(FS, { onLog: workerLog });
 
             for (const [bundleName, data] of bundleDataMap) {
-                mountBundleEager(FS, bundleName, data, fileManifest);
+                const meta = bundleMetaMap.get(bundleName) || null;
+                vfs.mountBundle(bundleName, data, fileManifest, meta);
             }
 
-            // Mount accumulated CTAN files
-            ctanMountedFiles.clear();
-            for (const [filePath, content] of accumulatedCtanFiles) {
-                if (fileManifest[filePath]) continue;
-                ensureDirectory(FS, filePath.substring(0, filePath.lastIndexOf('/')));
-                try {
-                    FS.writeFile(filePath, content);
-                    ctanMountedFiles.add(filePath);
-                } catch (e) {}
+            if (accumulatedCtanFiles.size > 0) {
+                vfs.mountCtanFiles(accumulatedCtanFiles);
             }
 
-            FS.writeFile('/texlive/texmf-dist/ls-R', generateLsR(FS, '/texlive/texmf-dist'));
+            vfs.finalize();
+
             FS.writeFile('/myformat.ini', preambleContent + '\n\\dump\n');
 
             const result = Module.callMainWithRedirects([
@@ -847,7 +838,7 @@ async function handleFormatGenerate(request) {
 
             if (result.exit_code === 0) {
                 const formatData = FS.readFile('/myformat.fmt');
-                workerLog('Format generated: ' + (formatData.byteLength / 1024 / 1024).toFixed(1) + 'MB in ' + (performance.now() - startTime).toFixed(0) + 'ms');
+                workerLog(`Format generated: ${(formatData.byteLength / 1024 / 1024).toFixed(1)}MB in ${(performance.now() - startTime).toFixed(0)}ms`);
 
                 self.postMessage({
                     type: 'format-generate-response', id, success: true, formatData: formatData.buffer
@@ -855,50 +846,72 @@ async function handleFormatGenerate(request) {
                 return;
             }
 
-            // Format generation failed - check for missing packages
+            // Check for missing packages
             let logContent = '';
             try { logContent = new TextDecoder().decode(FS.readFile('/myformat.log')); } catch (e) {}
             const allOutput = logContent + ' ' + (result.stdout || '') + ' ' + (result.stderr || '');
-            const missingFile = extractMissingFile(allOutput, ctanFetched);
+            const missingFile = extractMissingFile(allOutput, fetchedPackages);
 
             if (missingFile) {
                 const pkgName = getPackageFromFile(missingFile);
-                workerLog('Format missing: ' + missingFile + ', fetching ' + pkgName + ' from CTAN...');
+
+                // Try bundle first
+                const bundleName = packageMap?.[pkgName];
+                if (bundleName && !bundleDataMap.has(bundleName)) {
+                    workerLog(`Format missing: ${missingFile}, loading bundle ${bundleName}...`);
+                    try {
+                        const bundleResult = await requestBundleFetch(bundleName);
+                        if (bundleResult.success) {
+                            fetchedPackages.add(pkgName);
+                            bundleDataMap.set(bundleName, bundleResult.bundleData);
+                            if (bundleResult.bundleMeta) {
+                                bundleMetaMap.set(bundleName, bundleResult.bundleMeta);
+                            }
+                            retryCount++;
+                            continue;
+                        }
+                    } catch (e) {
+                        workerLog(`Bundle fetch failed: ${e.message}, trying CTAN...`);
+                    }
+                }
+
+                // Fall back to CTAN
+                workerLog(`Format missing: ${missingFile}, fetching ${pkgName} from CTAN...`);
                 try {
                     const ctanData = await requestCtanFetch(pkgName);
                     if (ctanData.success) {
-                        ctanFetched.add(pkgName);
+                        fetchedPackages.add(pkgName);
                         const files = ctanData.files instanceof Map ? ctanData.files : new Map(Object.entries(ctanData.files));
                         for (const [path, content] of files) accumulatedCtanFiles.set(path, content);
                         retryCount++;
-                        workerLog('Retry format generation #' + retryCount + '...');
                         continue;
                     }
                 } catch (e) {
-                    workerLog('CTAN fetch failed: ' + e.message);
+                    workerLog(`CTAN fetch failed: ${e.message}`);
                 }
             }
 
-            // No missing file found or CTAN fetch failed
-            throw new Error('Format generation failed with exit code ' + result.exit_code);
+            throw new Error(`Format generation failed with exit code ${result.exit_code}`);
 
         } catch (e) {
             if (retryCount >= maxRetries - 1) {
-                workerLog('Format generation error: ' + e.message);
+                workerLog(`Format generation error: ${e.message}`);
                 self.postMessage({ type: 'format-generate-response', id, success: false, error: e.message });
                 return;
             }
-            throw e;
+            retryCount++;
         }
     }
 
-    workerLog('Format generation failed after ' + maxRetries + ' retries');
+    workerLog(`Format generation failed after ${maxRetries} retries`);
     self.postMessage({ type: 'format-generate-response', id, success: false, error: 'Max retries exceeded' });
 }
 
-// Message handler
+// ============ Message Handler ============
+
 self.onmessage = async function(e) {
     const msg = e.data;
+
     switch (msg.type) {
         case 'init':
             cachedWasmModule = msg.wasmModule;
@@ -911,18 +924,30 @@ self.onmessage = async function(e) {
             }
             self.postMessage({ type: 'ready' });
             break;
+
         case 'compile':
             await handleCompile(msg);
             break;
+
         case 'generate-format':
             await handleFormatGenerate(msg);
             break;
+
         case 'ctan-fetch-response':
             const pending = pendingCtanRequests.get(msg.requestId);
             if (pending) {
                 pendingCtanRequests.delete(msg.requestId);
                 if (msg.success) pending.resolve(msg);
                 else pending.reject(new Error(msg.error || 'CTAN fetch failed'));
+            }
+            break;
+
+        case 'bundle-fetch-response':
+            const pendingBundle = pendingBundleRequests.get(msg.requestId);
+            if (pendingBundle) {
+                pendingBundleRequests.delete(msg.requestId);
+                if (msg.success) pendingBundle.resolve(msg);
+                else pendingBundle.reject(new Error(msg.error || 'Bundle fetch failed'));
             }
             break;
     }

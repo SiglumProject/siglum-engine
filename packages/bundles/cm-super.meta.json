@@ -1,0 +1,2538 @@
+{
+  "name": "cm-super",
+  "files": [
+    {
+      "path": "/texlive/texmf-dist/fonts/enc/dvips/cm-super",
+      "name": "cm-super-t1.enc",
+      "start": 0,
+      "end": 2971
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/enc/dvips/cm-super",
+      "name": "cm-super-t2a.enc",
+      "start": 2971,
+      "end": 6112
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/enc/dvips/cm-super",
+      "name": "cm-super-t2b.enc",
+      "start": 6112,
+      "end": 9957
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/enc/dvips/cm-super",
+      "name": "cm-super-t2c.enc",
+      "start": 9957,
+      "end": 13732
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/enc/dvips/cm-super",
+      "name": "cm-super-ts1.enc",
+      "start": 13732,
+      "end": 16632
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/enc/dvips/cm-super",
+      "name": "cm-super-x2.enc",
+      "start": 16632,
+      "end": 20850
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/map/dvips/cm-super",
+      "name": "cm-super-t1.map",
+      "start": 20850,
+      "end": 53185
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/map/dvips/cm-super",
+      "name": "cm-super-t2a.map",
+      "start": 53185,
+      "end": 86423
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/map/dvips/cm-super",
+      "name": "cm-super-t2b.map",
+      "start": 86423,
+      "end": 119661
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/map/dvips/cm-super",
+      "name": "cm-super-t2c.map",
+      "start": 119661,
+      "end": 152899
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/map/dvips/cm-super",
+      "name": "cm-super-ts1.map",
+      "start": 152899,
+      "end": 180872
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/map/dvips/cm-super",
+      "name": "cm-super-x2.map",
+      "start": 180872,
+      "end": 213240
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "isflb8.pfb",
+      "start": 213240,
+      "end": 231990
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "isfli8.pfb",
+      "start": 231990,
+      "end": 249889
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "isflo8.pfb",
+      "start": 249889,
+      "end": 268649
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "isflq8.pfb",
+      "start": 268649,
+      "end": 286537
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "isfltt8.pfb",
+      "start": 286537,
+      "end": 305336
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbbx10.pfb",
+      "start": 305336,
+      "end": 401759
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi0500.pfb",
+      "start": 401759,
+      "end": 599124
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi0600.pfb",
+      "start": 599124,
+      "end": 796169
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi0700.pfb",
+      "start": 796169,
+      "end": 983809
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi0800.pfb",
+      "start": 983809,
+      "end": 1183673
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi0900.pfb",
+      "start": 1183673,
+      "end": 1377217
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi1000.pfb",
+      "start": 1377217,
+      "end": 1570788
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi1095.pfb",
+      "start": 1570788,
+      "end": 1775242
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi1200.pfb",
+      "start": 1775242,
+      "end": 1981117
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi1440.pfb",
+      "start": 1981117,
+      "end": 2188974
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi1728.pfb",
+      "start": 2188974,
+      "end": 2380999
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi2074.pfb",
+      "start": 2380999,
+      "end": 2582123
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi2488.pfb",
+      "start": 2582123,
+      "end": 2781194
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi2986.pfb",
+      "start": 2781194,
+      "end": 2976841
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbi3583.pfb",
+      "start": 2976841,
+      "end": 3171843
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl0500.pfb",
+      "start": 3171843,
+      "end": 3333904
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl0600.pfb",
+      "start": 3333904,
+      "end": 3488209
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl0700.pfb",
+      "start": 3488209,
+      "end": 3642661
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl0800.pfb",
+      "start": 3642661,
+      "end": 3804132
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl0900.pfb",
+      "start": 3804132,
+      "end": 3950308
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl1000.pfb",
+      "start": 3950308,
+      "end": 4099836
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl1095.pfb",
+      "start": 4099836,
+      "end": 4258763
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl1200.pfb",
+      "start": 4258763,
+      "end": 4404480
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl1440.pfb",
+      "start": 4404480,
+      "end": 4547856
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl1728.pfb",
+      "start": 4547856,
+      "end": 4694676
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl2074.pfb",
+      "start": 4694676,
+      "end": 4844904
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl2488.pfb",
+      "start": 4844904,
+      "end": 4992777
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl2986.pfb",
+      "start": 4992777,
+      "end": 5142502
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbl3583.pfb",
+      "start": 5142502,
+      "end": 5298446
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm0500.pfb",
+      "start": 5298446,
+      "end": 5429676
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm0700.pfb",
+      "start": 5429676,
+      "end": 5562671
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm0900.pfb",
+      "start": 5562671,
+      "end": 5690777
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm1000.pfb",
+      "start": 5690777,
+      "end": 5820177
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm1095.pfb",
+      "start": 5820177,
+      "end": 5948029
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm1200.pfb",
+      "start": 5948029,
+      "end": 6076975
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm1440.pfb",
+      "start": 6076975,
+      "end": 6198371
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm1728.pfb",
+      "start": 6198371,
+      "end": 6317320
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm2074.pfb",
+      "start": 6317320,
+      "end": 6436212
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm2488.pfb",
+      "start": 6436212,
+      "end": 6555589
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm2986.pfb",
+      "start": 6555589,
+      "end": 6675319
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbm3583.pfb",
+      "start": 6675319,
+      "end": 6793035
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmo10.pfb",
+      "start": 6793035,
+      "end": 6892858
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmo17.pfb",
+      "start": 6892858,
+      "end": 6994923
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmo8.pfb",
+      "start": 6994923,
+      "end": 7101835
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmo9.pfb",
+      "start": 7101835,
+      "end": 7205360
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmr10.pfb",
+      "start": 7205360,
+      "end": 7299260
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmr17.pfb",
+      "start": 7299260,
+      "end": 7394673
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmr8.pfb",
+      "start": 7394673,
+      "end": 7488436
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbmr9.pfb",
+      "start": 7488436,
+      "end": 7583506
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbso10.pfb",
+      "start": 7583506,
+      "end": 7684295
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbso17.pfb",
+      "start": 7684295,
+      "end": 7784765
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbso8.pfb",
+      "start": 7784765,
+      "end": 7888346
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbso9.pfb",
+      "start": 7888346,
+      "end": 7990684
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbsr10.pfb",
+      "start": 7990684,
+      "end": 8085980
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbsr17.pfb",
+      "start": 8085980,
+      "end": 8181118
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbsr8.pfb",
+      "start": 8181118,
+      "end": 8280458
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbsr9.pfb",
+      "start": 8280458,
+      "end": 8377534
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbtl10.pfb",
+      "start": 8377534,
+      "end": 8542254
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbto10.pfb",
+      "start": 8542254,
+      "end": 8698238
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx0500.pfb",
+      "start": 8698238,
+      "end": 8864083
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx0600.pfb",
+      "start": 8864083,
+      "end": 9026082
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx0700.pfb",
+      "start": 9026082,
+      "end": 9170297
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx0800.pfb",
+      "start": 9170297,
+      "end": 9334549
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx0900.pfb",
+      "start": 9334549,
+      "end": 9478510
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx1000.pfb",
+      "start": 9478510,
+      "end": 9623918
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx1095.pfb",
+      "start": 9623918,
+      "end": 9778518
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx1200.pfb",
+      "start": 9778518,
+      "end": 9918694
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx1440.pfb",
+      "start": 9918694,
+      "end": 10054636
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx1728.pfb",
+      "start": 10054636,
+      "end": 10194462
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx2074.pfb",
+      "start": 10194462,
+      "end": 10334656
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx2488.pfb",
+      "start": 10334656,
+      "end": 10470594
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx2986.pfb",
+      "start": 10470594,
+      "end": 10612634
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfbx3583.pfb",
+      "start": 10612634,
+      "end": 10752454
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc0500.pfb",
+      "start": 10752454,
+      "end": 10893144
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc0600.pfb",
+      "start": 10893144,
+      "end": 11022849
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc0700.pfb",
+      "start": 11022849,
+      "end": 11159969
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc0800.pfb",
+      "start": 11159969,
+      "end": 11298395
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc0900.pfb",
+      "start": 11298395,
+      "end": 11416910
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc1000.pfb",
+      "start": 11416910,
+      "end": 11526623
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc1095.pfb",
+      "start": 11526623,
+      "end": 11644733
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc1200.pfb",
+      "start": 11644733,
+      "end": 11753327
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc1440.pfb",
+      "start": 11753327,
+      "end": 11863359
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc1728.pfb",
+      "start": 11863359,
+      "end": 11970562
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc2074.pfb",
+      "start": 11970562,
+      "end": 12078603
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc2488.pfb",
+      "start": 12078603,
+      "end": 12186491
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc2986.pfb",
+      "start": 12186491,
+      "end": 12296441
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfcc3583.pfb",
+      "start": 12296441,
+      "end": 12404599
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci0500.pfb",
+      "start": 12404599,
+      "end": 12603423
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci0600.pfb",
+      "start": 12603423,
+      "end": 12791397
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci0700.pfb",
+      "start": 12791397,
+      "end": 12975923
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci0800.pfb",
+      "start": 12975923,
+      "end": 13163425
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci0900.pfb",
+      "start": 13163425,
+      "end": 13347557
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci1000.pfb",
+      "start": 13347557,
+      "end": 13534596
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci1095.pfb",
+      "start": 13534596,
+      "end": 13731144
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci1200.pfb",
+      "start": 13731144,
+      "end": 13930075
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci1440.pfb",
+      "start": 13930075,
+      "end": 14117892
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci1728.pfb",
+      "start": 14117892,
+      "end": 14297757
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci2074.pfb",
+      "start": 14297757,
+      "end": 14491253
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci2488.pfb",
+      "start": 14491253,
+      "end": 14686609
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci2986.pfb",
+      "start": 14686609,
+      "end": 14879818
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfci3583.pfb",
+      "start": 14879818,
+      "end": 15070993
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh0500.pfb",
+      "start": 15070993,
+      "end": 15258372
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh0600.pfb",
+      "start": 15258372,
+      "end": 15427476
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh0700.pfb",
+      "start": 15427476,
+      "end": 15585681
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh0800.pfb",
+      "start": 15585681,
+      "end": 15753161
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh0900.pfb",
+      "start": 15753161,
+      "end": 15905325
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh1000.pfb",
+      "start": 15905325,
+      "end": 16048123
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh1095.pfb",
+      "start": 16048123,
+      "end": 16197333
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh1200.pfb",
+      "start": 16197333,
+      "end": 16334301
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh1440.pfb",
+      "start": 16334301,
+      "end": 16468875
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh1728.pfb",
+      "start": 16468875,
+      "end": 16600048
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh2074.pfb",
+      "start": 16600048,
+      "end": 16731192
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh2488.pfb",
+      "start": 16731192,
+      "end": 16863207
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh2986.pfb",
+      "start": 16863207,
+      "end": 16996970
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfdh3583.pfb",
+      "start": 16996970,
+      "end": 17130430
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb0500.pfb",
+      "start": 17130430,
+      "end": 17329506
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb0600.pfb",
+      "start": 17329506,
+      "end": 17520486
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb0700.pfb",
+      "start": 17520486,
+      "end": 17703911
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb0800.pfb",
+      "start": 17703911,
+      "end": 17920427
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb0900.pfb",
+      "start": 17920427,
+      "end": 18082773
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb1000.pfb",
+      "start": 18082773,
+      "end": 18244122
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb1095.pfb",
+      "start": 18244122,
+      "end": 18424944
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb1200.pfb",
+      "start": 18424944,
+      "end": 18603370
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb1440.pfb",
+      "start": 18603370,
+      "end": 18767259
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb1728.pfb",
+      "start": 18767259,
+      "end": 18927989
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffb2074.pfb",
+      "start": 18927989,
+      "end": 19104826
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfff0900.pfb",
+      "start": 19104826,
+      "end": 19277486
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfff1000.pfb",
+      "start": 19277486,
+      "end": 19451916
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfff1095.pfb",
+      "start": 19451916,
+      "end": 19622882
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfff1200.pfb",
+      "start": 19622882,
+      "end": 19795250
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfff1440.pfb",
+      "start": 19795250,
+      "end": 19971550
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfff2488.pfb",
+      "start": 19971550,
+      "end": 20144586
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffi0900.pfb",
+      "start": 20144586,
+      "end": 20320367
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffi1000.pfb",
+      "start": 20320367,
+      "end": 20491973
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffi1095.pfb",
+      "start": 20491973,
+      "end": 20666628
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffi1200.pfb",
+      "start": 20666628,
+      "end": 20848257
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffi1440.pfb",
+      "start": 20848257,
+      "end": 21024733
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffi1728.pfb",
+      "start": 21024733,
+      "end": 21199003
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffi2074.pfb",
+      "start": 21199003,
+      "end": 21372393
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs0500.pfb",
+      "start": 21372393,
+      "end": 21551760
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs0600.pfb",
+      "start": 21551760,
+      "end": 21738927
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs0700.pfb",
+      "start": 21738927,
+      "end": 21915487
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs0800.pfb",
+      "start": 21915487,
+      "end": 22115007
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs0900.pfb",
+      "start": 22115007,
+      "end": 22281173
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs1000.pfb",
+      "start": 22281173,
+      "end": 22450679
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs1095.pfb",
+      "start": 22450679,
+      "end": 22624998
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs1200.pfb",
+      "start": 22624998,
+      "end": 22796474
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs1440.pfb",
+      "start": 22796474,
+      "end": 22962944
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs1728.pfb",
+      "start": 22962944,
+      "end": 23137701
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sffs2074.pfb",
+      "start": 23137701,
+      "end": 23312319
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit0800.pfb",
+      "start": 23312319,
+      "end": 23463201
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit0900.pfb",
+      "start": 23463201,
+      "end": 23621567
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit1000.pfb",
+      "start": 23621567,
+      "end": 23778986
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit1095.pfb",
+      "start": 23778986,
+      "end": 23941223
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit1200.pfb",
+      "start": 23941223,
+      "end": 24097950
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit1440.pfb",
+      "start": 24097950,
+      "end": 24258719
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit1728.pfb",
+      "start": 24258719,
+      "end": 24412840
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit2074.pfb",
+      "start": 24412840,
+      "end": 24574314
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfit2488.pfb",
+      "start": 24574314,
+      "end": 24733792
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sflb8.pfb",
+      "start": 24733792,
+      "end": 24883100
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfli8.pfb",
+      "start": 24883100,
+      "end": 25033586
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sflo8.pfb",
+      "start": 25033586,
+      "end": 25192827
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sflq8.pfb",
+      "start": 25192827,
+      "end": 25335488
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfltt8.pfb",
+      "start": 25335488,
+      "end": 25510105
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc0500.pfb",
+      "start": 25510105,
+      "end": 25654306
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc0600.pfb",
+      "start": 25654306,
+      "end": 25791885
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc0700.pfb",
+      "start": 25791885,
+      "end": 25911519
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc0800.pfb",
+      "start": 25911519,
+      "end": 26050255
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc0900.pfb",
+      "start": 26050255,
+      "end": 26172536
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc1000.pfb",
+      "start": 26172536,
+      "end": 26294309
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc1095.pfb",
+      "start": 26294309,
+      "end": 26427867
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc1200.pfb",
+      "start": 26427867,
+      "end": 26548271
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc1440.pfb",
+      "start": 26548271,
+      "end": 26671743
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc1728.pfb",
+      "start": 26671743,
+      "end": 26794947
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc2074.pfb",
+      "start": 26794947,
+      "end": 26919720
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc2488.pfb",
+      "start": 26919720,
+      "end": 27046307
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc2986.pfb",
+      "start": 27046307,
+      "end": 27171636
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoc3583.pfb",
+      "start": 27171636,
+      "end": 27299197
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfocc10.pfb",
+      "start": 27299197,
+      "end": 27401251
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sform10.pfb",
+      "start": 27401251,
+      "end": 27529023
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sform5.pfb",
+      "start": 27529023,
+      "end": 27659778
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sform6.pfb",
+      "start": 27659778,
+      "end": 27792626
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sform7.pfb",
+      "start": 27792626,
+      "end": 27920814
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sform8.pfb",
+      "start": 27920814,
+      "end": 28050191
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sform9.pfb",
+      "start": 28050191,
+      "end": 28176627
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfosl10.pfb",
+      "start": 28176627,
+      "end": 28307339
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfosl5.pfb",
+      "start": 28307339,
+      "end": 28441053
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfosl6.pfb",
+      "start": 28441053,
+      "end": 28572116
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfosl7.pfb",
+      "start": 28572116,
+      "end": 28708990
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfosl8.pfb",
+      "start": 28708990,
+      "end": 28843939
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfosl9.pfb",
+      "start": 28843939,
+      "end": 28976619
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfoti10.pfb",
+      "start": 28976619,
+      "end": 29147542
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfqi8.pfb",
+      "start": 29147542,
+      "end": 29298087
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb0500.pfb",
+      "start": 29298087,
+      "end": 29449287
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb0600.pfb",
+      "start": 29449287,
+      "end": 29599953
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb0700.pfb",
+      "start": 29599953,
+      "end": 29739134
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb0800.pfb",
+      "start": 29739134,
+      "end": 29904187
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb0900.pfb",
+      "start": 29904187,
+      "end": 30043105
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb1000.pfb",
+      "start": 30043105,
+      "end": 30185752
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb1095.pfb",
+      "start": 30185752,
+      "end": 30340915
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb1200.pfb",
+      "start": 30340915,
+      "end": 30479444
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb1440.pfb",
+      "start": 30479444,
+      "end": 30615856
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb1728.pfb",
+      "start": 30615856,
+      "end": 30753280
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb2074.pfb",
+      "start": 30753280,
+      "end": 30891623
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb2488.pfb",
+      "start": 30891623,
+      "end": 31030656
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb2986.pfb",
+      "start": 31030656,
+      "end": 31168309
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrb3583.pfb",
+      "start": 31168309,
+      "end": 31308073
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm0500.pfb",
+      "start": 31308073,
+      "end": 31488491
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm0600.pfb",
+      "start": 31488491,
+      "end": 31651115
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm0700.pfb",
+      "start": 31651115,
+      "end": 31805714
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm0800.pfb",
+      "start": 31805714,
+      "end": 31969941
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm0900.pfb",
+      "start": 31969941,
+      "end": 32118978
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm1000.pfb",
+      "start": 32118978,
+      "end": 32257236
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm1095.pfb",
+      "start": 32257236,
+      "end": 32403165
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm1200.pfb",
+      "start": 32403165,
+      "end": 32539266
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm1440.pfb",
+      "start": 32539266,
+      "end": 32670344
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm1728.pfb",
+      "start": 32670344,
+      "end": 32801782
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm2074.pfb",
+      "start": 32801782,
+      "end": 32933072
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm2488.pfb",
+      "start": 32933072,
+      "end": 33064453
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm2986.pfb",
+      "start": 33064453,
+      "end": 33198264
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfrm3583.pfb",
+      "start": 33198264,
+      "end": 33329541
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc0500.pfb",
+      "start": 33329541,
+      "end": 33475635
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc0600.pfb",
+      "start": 33475635,
+      "end": 33616302
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc0700.pfb",
+      "start": 33616302,
+      "end": 33751594
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc0800.pfb",
+      "start": 33751594,
+      "end": 33895944
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc0900.pfb",
+      "start": 33895944,
+      "end": 34027166
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc1000.pfb",
+      "start": 34027166,
+      "end": 34159310
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc1095.pfb",
+      "start": 34159310,
+      "end": 34291218
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc1200.pfb",
+      "start": 34291218,
+      "end": 34423047
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc1440.pfb",
+      "start": 34423047,
+      "end": 34544544
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc1728.pfb",
+      "start": 34544544,
+      "end": 34664072
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc2074.pfb",
+      "start": 34664072,
+      "end": 34789422
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc2488.pfb",
+      "start": 34789422,
+      "end": 34913960
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc2986.pfb",
+      "start": 34913960,
+      "end": 35040832
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsc3583.pfb",
+      "start": 35040832,
+      "end": 35168170
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi0500.pfb",
+      "start": 35168170,
+      "end": 35273352
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi0600.pfb",
+      "start": 35273352,
+      "end": 35377305
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi0700.pfb",
+      "start": 35377305,
+      "end": 35481211
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi0800.pfb",
+      "start": 35481211,
+      "end": 35587366
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi0900.pfb",
+      "start": 35587366,
+      "end": 35691805
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi1000.pfb",
+      "start": 35691805,
+      "end": 35795412
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi1095.pfb",
+      "start": 35795412,
+      "end": 35902377
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi1200.pfb",
+      "start": 35902377,
+      "end": 36006964
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi1440.pfb",
+      "start": 36006964,
+      "end": 36106243
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi1728.pfb",
+      "start": 36106243,
+      "end": 36206059
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi2074.pfb",
+      "start": 36206059,
+      "end": 36302709
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi2488.pfb",
+      "start": 36302709,
+      "end": 36398249
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi2986.pfb",
+      "start": 36398249,
+      "end": 36495293
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsi3583.pfb",
+      "start": 36495293,
+      "end": 36593602
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl0500.pfb",
+      "start": 36593602,
+      "end": 36771006
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl0600.pfb",
+      "start": 36771006,
+      "end": 36935345
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl0700.pfb",
+      "start": 36935345,
+      "end": 37095749
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl0800.pfb",
+      "start": 37095749,
+      "end": 37269054
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl0900.pfb",
+      "start": 37269054,
+      "end": 37424959
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl1000.pfb",
+      "start": 37424959,
+      "end": 37581034
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl1095.pfb",
+      "start": 37581034,
+      "end": 37739354
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl1200.pfb",
+      "start": 37739354,
+      "end": 37890034
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl1440.pfb",
+      "start": 37890034,
+      "end": 38033680
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl1728.pfb",
+      "start": 38033680,
+      "end": 38176993
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl2074.pfb",
+      "start": 38176993,
+      "end": 38317841
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl2488.pfb",
+      "start": 38317841,
+      "end": 38463386
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl2986.pfb",
+      "start": 38463386,
+      "end": 38607834
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsl3583.pfb",
+      "start": 38607834,
+      "end": 38754275
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso0500.pfb",
+      "start": 38754275,
+      "end": 38913891
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso0600.pfb",
+      "start": 38913891,
+      "end": 39074623
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso0700.pfb",
+      "start": 39074623,
+      "end": 39235706
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso0800.pfb",
+      "start": 39235706,
+      "end": 39397960
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso0900.pfb",
+      "start": 39397960,
+      "end": 39557180
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso1000.pfb",
+      "start": 39557180,
+      "end": 39718038
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso1095.pfb",
+      "start": 39718038,
+      "end": 39876843
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso1200.pfb",
+      "start": 39876843,
+      "end": 40035503
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso1440.pfb",
+      "start": 40035503,
+      "end": 40192533
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso1728.pfb",
+      "start": 40192533,
+      "end": 40347894
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso2074.pfb",
+      "start": 40347894,
+      "end": 40505840
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso2488.pfb",
+      "start": 40505840,
+      "end": 40661856
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso2986.pfb",
+      "start": 40661856,
+      "end": 40818739
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfso3583.pfb",
+      "start": 40818739,
+      "end": 40977277
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsq8.pfb",
+      "start": 40977277,
+      "end": 41119723
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss0500.pfb",
+      "start": 41119723,
+      "end": 41221006
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss0600.pfb",
+      "start": 41221006,
+      "end": 41320937
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss0700.pfb",
+      "start": 41320937,
+      "end": 41417824
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss0800.pfb",
+      "start": 41417824,
+      "end": 41513265
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss0900.pfb",
+      "start": 41513265,
+      "end": 41607913
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss1000.pfb",
+      "start": 41607913,
+      "end": 41702182
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss1095.pfb",
+      "start": 41702182,
+      "end": 41799454
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss1200.pfb",
+      "start": 41799454,
+      "end": 41895246
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss1440.pfb",
+      "start": 41895246,
+      "end": 41986190
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss1728.pfb",
+      "start": 41986190,
+      "end": 42077658
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss2074.pfb",
+      "start": 42077658,
+      "end": 42169590
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss2488.pfb",
+      "start": 42169590,
+      "end": 42261738
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss2986.pfb",
+      "start": 42261738,
+      "end": 42354979
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfss3583.pfb",
+      "start": 42354979,
+      "end": 42446007
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfssdc10.pfb",
+      "start": 42446007,
+      "end": 42595388
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst0800.pfb",
+      "start": 42595388,
+      "end": 42764315
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst0900.pfb",
+      "start": 42764315,
+      "end": 42930962
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst1000.pfb",
+      "start": 42930962,
+      "end": 43092930
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst1095.pfb",
+      "start": 43092930,
+      "end": 43253816
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst1200.pfb",
+      "start": 43253816,
+      "end": 43420998
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst1440.pfb",
+      "start": 43420998,
+      "end": 43583869
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst1728.pfb",
+      "start": 43583869,
+      "end": 43751330
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst2074.pfb",
+      "start": 43751330,
+      "end": 43917814
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst2488.pfb",
+      "start": 43917814,
+      "end": 44085022
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst2986.pfb",
+      "start": 44085022,
+      "end": 44246540
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfst3583.pfb",
+      "start": 44246540,
+      "end": 44412682
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx0500.pfb",
+      "start": 44412682,
+      "end": 44568894
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx0600.pfb",
+      "start": 44568894,
+      "end": 44717800
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx0700.pfb",
+      "start": 44717800,
+      "end": 44866235
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx0800.pfb",
+      "start": 44866235,
+      "end": 45017393
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx0900.pfb",
+      "start": 45017393,
+      "end": 45172057
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx1000.pfb",
+      "start": 45172057,
+      "end": 45321135
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx1095.pfb",
+      "start": 45321135,
+      "end": 45466942
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx1200.pfb",
+      "start": 45466942,
+      "end": 45615378
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx1440.pfb",
+      "start": 45615378,
+      "end": 45763679
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx1728.pfb",
+      "start": 45763679,
+      "end": 45907697
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx2074.pfb",
+      "start": 45907697,
+      "end": 46049036
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx2488.pfb",
+      "start": 46049036,
+      "end": 46191879
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx2986.pfb",
+      "start": 46191879,
+      "end": 46335195
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfsx3583.pfb",
+      "start": 46335195,
+      "end": 46481909
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc0800.pfb",
+      "start": 46481909,
+      "end": 46628678
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc0900.pfb",
+      "start": 46628678,
+      "end": 46770625
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc1000.pfb",
+      "start": 46770625,
+      "end": 46916147
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc1095.pfb",
+      "start": 46916147,
+      "end": 47057735
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc1200.pfb",
+      "start": 47057735,
+      "end": 47201178
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc1440.pfb",
+      "start": 47201178,
+      "end": 47341425
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc1728.pfb",
+      "start": 47341425,
+      "end": 47483174
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc2074.pfb",
+      "start": 47483174,
+      "end": 47628719
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc2488.pfb",
+      "start": 47628719,
+      "end": 47773205
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc2986.pfb",
+      "start": 47773205,
+      "end": 47921310
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftc3583.pfb",
+      "start": 47921310,
+      "end": 48066707
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti0500.pfb",
+      "start": 48066707,
+      "end": 48265968
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti0600.pfb",
+      "start": 48265968,
+      "end": 48454125
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti0700.pfb",
+      "start": 48454125,
+      "end": 48638463
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti0800.pfb",
+      "start": 48638463,
+      "end": 48826088
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti0900.pfb",
+      "start": 48826088,
+      "end": 49009761
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti1000.pfb",
+      "start": 49009761,
+      "end": 49196315
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti1095.pfb",
+      "start": 49196315,
+      "end": 49392761
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti1200.pfb",
+      "start": 49392761,
+      "end": 49590982
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti1440.pfb",
+      "start": 49590982,
+      "end": 49778597
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti1728.pfb",
+      "start": 49778597,
+      "end": 49957761
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti2074.pfb",
+      "start": 49957761,
+      "end": 50150695
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti2488.pfb",
+      "start": 50150695,
+      "end": 50345007
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti2986.pfb",
+      "start": 50345007,
+      "end": 50537843
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfti3583.pfb",
+      "start": 50537843,
+      "end": 50728866
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt0800.pfb",
+      "start": 50728866,
+      "end": 50904507
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt0900.pfb",
+      "start": 50904507,
+      "end": 51075334
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt1000.pfb",
+      "start": 51075334,
+      "end": 51244535
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt1095.pfb",
+      "start": 51244535,
+      "end": 51414205
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt1200.pfb",
+      "start": 51414205,
+      "end": 51581290
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt1440.pfb",
+      "start": 51581290,
+      "end": 51747482
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt1728.pfb",
+      "start": 51747482,
+      "end": 51920731
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt2074.pfb",
+      "start": 51920731,
+      "end": 52095556
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt2488.pfb",
+      "start": 52095556,
+      "end": 52264701
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt2986.pfb",
+      "start": 52264701,
+      "end": 52434839
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sftt3583.pfb",
+      "start": 52434839,
+      "end": 52603293
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui0500.pfb",
+      "start": 52603293,
+      "end": 52777935
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui0600.pfb",
+      "start": 52777935,
+      "end": 52938400
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui0700.pfb",
+      "start": 52938400,
+      "end": 53102680
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui0800.pfb",
+      "start": 53102680,
+      "end": 53261060
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui0900.pfb",
+      "start": 53261060,
+      "end": 53413754
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui1000.pfb",
+      "start": 53413754,
+      "end": 53566997
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui1095.pfb",
+      "start": 53566997,
+      "end": 53729192
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui1200.pfb",
+      "start": 53729192,
+      "end": 53879718
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui1440.pfb",
+      "start": 53879718,
+      "end": 54023566
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui1728.pfb",
+      "start": 54023566,
+      "end": 54170009
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui2074.pfb",
+      "start": 54170009,
+      "end": 54316188
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui2488.pfb",
+      "start": 54316188,
+      "end": 54461911
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui2986.pfb",
+      "start": 54461911,
+      "end": 54607614
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfui3583.pfb",
+      "start": 54607614,
+      "end": 54753084
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi0800.pfb",
+      "start": 54753084,
+      "end": 54913815
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi0900.pfb",
+      "start": 54913815,
+      "end": 55077779
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi1000.pfb",
+      "start": 55077779,
+      "end": 55238130
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi1095.pfb",
+      "start": 55238130,
+      "end": 55405545
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi1200.pfb",
+      "start": 55405545,
+      "end": 55563761
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi1440.pfb",
+      "start": 55563761,
+      "end": 55725722
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi1728.pfb",
+      "start": 55725722,
+      "end": 55884994
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi2074.pfb",
+      "start": 55884994,
+      "end": 56045338
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi2488.pfb",
+      "start": 56045338,
+      "end": 56205419
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi2986.pfb",
+      "start": 56205419,
+      "end": 56372958
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvi3583.pfb",
+      "start": 56372958,
+      "end": 56536286
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt0800.pfb",
+      "start": 56536286,
+      "end": 56692610
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt0900.pfb",
+      "start": 56692610,
+      "end": 56845515
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt1000.pfb",
+      "start": 56845515,
+      "end": 56998155
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt1095.pfb",
+      "start": 56998155,
+      "end": 57150976
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt1200.pfb",
+      "start": 57150976,
+      "end": 57302361
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt1440.pfb",
+      "start": 57302361,
+      "end": 57454600
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt1728.pfb",
+      "start": 57454600,
+      "end": 57611360
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt2074.pfb",
+      "start": 57611360,
+      "end": 57768958
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt2488.pfb",
+      "start": 57768958,
+      "end": 57922196
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt2986.pfb",
+      "start": 57922196,
+      "end": 58082196
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfvt3583.pfb",
+      "start": 58082196,
+      "end": 58241560
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc0500.pfb",
+      "start": 58241560,
+      "end": 58385782
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc0600.pfb",
+      "start": 58385782,
+      "end": 58520326
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc0700.pfb",
+      "start": 58520326,
+      "end": 58635778
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc0800.pfb",
+      "start": 58635778,
+      "end": 58770002
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc0900.pfb",
+      "start": 58770002,
+      "end": 58888386
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc1000.pfb",
+      "start": 58888386,
+      "end": 59007056
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc1095.pfb",
+      "start": 59007056,
+      "end": 59138377
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc1200.pfb",
+      "start": 59138377,
+      "end": 59252459
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc1440.pfb",
+      "start": 59252459,
+      "end": 59363260
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc1728.pfb",
+      "start": 59363260,
+      "end": 59477254
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc2074.pfb",
+      "start": 59477254,
+      "end": 59589034
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc2488.pfb",
+      "start": 59589034,
+      "end": 59704504
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc2986.pfb",
+      "start": 59704504,
+      "end": 59817853
+    },
+    {
+      "path": "/texlive/texmf-dist/fonts/type1/public/cm-super",
+      "name": "sfxc3583.pfb",
+      "start": 59817853,
+      "end": 59932135
+    },
+    {
+      "path": "/texlive/texmf-dist/tex/latex/cm-super",
+      "name": "type1ec.sty",
+      "start": 59932135,
+      "end": 59933435
+    }
+  ],
+  "totalSize": 59933435
+}

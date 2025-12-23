@@ -13,6 +13,8 @@ import {
     readFromOPFS,
     writeToOPFS,
     clearCTANCache,
+    getCompiledWasmModule,
+    saveCompiledWasmModule,
 } from './storage.js';
 
 export class BusyTeXCompiler {
@@ -54,20 +56,63 @@ export class BusyTeXCompiler {
     async init() {
         this._log('Initializing BusyTeX compiler...');
 
-        // Load manifests
-        await this.bundleManager.loadManifest();
-        await this.bundleManager.loadBundleDeps();
+        // Load manifests + WASM in parallel
+        await Promise.all([
+            this._loadManifests(),
+            this._loadWasm(),
+        ]);
 
-        // Pre-compile WASM module
-        this._log('Pre-compiling WASM module...');
-        const response = await fetch(this.wasmUrl);
-        const wasmBytes = await response.arrayBuffer();
-        this.cachedWasmModule = await WebAssembly.compile(wasmBytes);
-
-        // Initialize worker
-        await this._initWorker();
+        // Worker init (required) + bundle preload (optional, don't fail if it errors)
+        await Promise.all([
+            this._initWorker(),
+            this.bundleManager.preloadEngine('pdflatex').catch(e => {
+                this._log('Bundle preload failed (will load on demand): ' + e.message);
+            }),
+        ]);
 
         this._log('Compiler initialized');
+    }
+
+    async _loadManifests() {
+        await this.bundleManager.loadManifest();
+        await this.bundleManager.loadBundleDeps();
+    }
+
+    async _loadWasm() {
+        this._log('Loading WASM module...');
+        const startTime = performance.now();
+
+        // Try to get cached compiled module (instant - no compilation needed!)
+        const cachedModule = await getCompiledWasmModule();
+
+        if (cachedModule) {
+            this.cachedWasmModule = cachedModule;
+            this._log('WASM ready from cache in ' + (performance.now() - startTime).toFixed(0) + 'ms');
+        } else if (window.__wasmCompilePromise) {
+            // Use early-started compilation from inline script (started before module loaded)
+            this._log('Awaiting early-started WASM compilation...');
+            try {
+                this.cachedWasmModule = await window.__wasmCompilePromise;
+                const totalTime = performance.now() - (window.__wasmCompileStart || startTime);
+                this._log('WASM ready in ' + totalTime.toFixed(0) + 'ms (early start)');
+                // Cache compiled module to IndexedDB
+                saveCompiledWasmModule(this.cachedWasmModule).catch(() => {});
+            } catch (e) {
+                this._log('Early compile failed, falling back: ' + e.message);
+                // Fall through to normal loading
+                window.__wasmCompilePromise = null;
+                return this._loadWasm();
+            }
+        } else {
+            // Fallback: Use streaming compilation
+            this._log('Streaming WASM from network (Brotli compressed)...');
+            const response = await fetch(this.wasmUrl);
+            this._log('Compiling WASM (streaming)...');
+            this.cachedWasmModule = await WebAssembly.compileStreaming(response);
+            this._log('WASM ready in ' + (performance.now() - startTime).toFixed(0) + 'ms');
+            // Cache compiled module to IndexedDB in background
+            saveCompiledWasmModule(this.cachedWasmModule).catch(() => {});
+        }
     }
 
     async _initWorker() {
@@ -149,6 +194,10 @@ export class BusyTeXCompiler {
             case 'ctan-fetch-request':
                 this._handleCtanFetchRequest(msg);
                 break;
+
+            case 'bundle-fetch-request':
+                this._handleBundleFetchRequest(msg);
+                break;
         }
     }
 
@@ -197,6 +246,48 @@ export class BusyTeXCompiler {
                 type: 'ctan-fetch-response',
                 requestId,
                 packageName,
+                success: false,
+                error: e.message,
+            });
+        }
+    }
+
+    async _handleBundleFetchRequest(msg) {
+        const { requestId, bundleName } = msg;
+
+        try {
+            this._log('Worker requested bundle: ' + bundleName);
+
+            // Load bundle data and metadata in parallel
+            const [bundleData, metaResponse] = await Promise.all([
+                this.bundleManager.loadBundle(bundleName),
+                fetch(`${this.bundlesUrl}/${bundleName}.meta.json`).catch(() => null),
+            ]);
+
+            // Parse metadata if available
+            let bundleMeta = null;
+            if (metaResponse?.ok) {
+                try {
+                    bundleMeta = await metaResponse.json();
+                } catch (e) {
+                    this._log('Failed to parse bundle metadata: ' + e.message);
+                }
+            }
+
+            this.worker.postMessage({
+                type: 'bundle-fetch-response',
+                requestId,
+                bundleName,
+                success: true,
+                bundleData,
+                bundleMeta,
+            }, [bundleData]);
+        } catch (e) {
+            this._log('Bundle fetch error: ' + e.message);
+            this.worker.postMessage({
+                type: 'bundle-fetch-response',
+                requestId,
+                bundleName,
                 success: false,
                 error: e.message,
             });
