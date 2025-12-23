@@ -38,11 +38,30 @@
         .stats { padding: 12px 16px; background: #f5f5f7; border-radius: 10px; font-size: 12px; margin-bottom: 16px; color: #86868b; }
         .stats strong { color: #1d1d1f; font-weight: 500; }
         #time { font-size: 13px; color: #86868b; font-weight: 500; }
+        .banner { background: linear-gradient(135deg, #1a1815 0%, #221f1a 50%, #2a2722 100%); color: #e8e6e3; padding: 12px 20px; margin: -40px -20px 24px -20px; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 12px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .banner-left { display: flex; align-items: center; gap: 12px; }
+        .banner-logo { font-weight: 700; font-size: 18px; letter-spacing: -0.5px; color: #b8956e; }
+        .banner-text { font-size: 13px; color: #a8a5a0; }
+        .banner-links { display: flex; gap: 16px; }
+        .banner-links a { color: #d4b896; text-decoration: none; font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .banner-links a:hover { color: #e8e6e3; text-decoration: underline; }
     </style>
 </head>
 <body>
+    <div class="banner">
+        <div class="banner-left">
+            <span class="banner-text">Sponsored by</span>
+            <span class="banner-logo">Siglum</span>
+            <span class="banner-text">— Open source in-browser LaTeX editor and compiler</span>
+        </div>
+        <div class="banner-links">
+            <a href="https://siglum.org" target="_blank">Siglum.org</a>
+            <a href="https://github.com/AudigoLabs/siglum" target="_blank">GitHub</a>
+        </div>
+    </div>
+
     <h1>BusyTeX Lazy Loading Demo</h1>
-    <p>This demo uses the busytex-lazy library as an ES module. Files are fetched individually as TeX requests them.</p>
+    <p>Part of the <a href="https://siglum.org" style="color: #0071e3;">Siglum</a> project. This demo uses busytex-lazy as an ES module with on-demand package loading.</p>
 
     <div class="stats" id="stats">
         <strong>Bundles:</strong> <span id="bundleCount">0</span> |
