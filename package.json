@@ -18,6 +18,8 @@
     "packages/bundles/"
   ],
   "scripts": {
+    "dev": "bun serve-local.ts",
+    "api": "cd cloudflare && bunx wrangler@3.114.16 dev --port 8787 --remote",
     "demo": "python3 -m http.server 8080",
     "proxy": "cd packages && bun run ctan-proxy.ts"
   },

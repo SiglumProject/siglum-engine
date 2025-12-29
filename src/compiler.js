@@ -13,8 +13,6 @@ import {
     readFromOPFS,
     writeToOPFS,
     clearCTANCache,
-    getCompiledWasmModule,
-    saveCompiledWasmModule,
 } from './storage.js';
 
 export class BusyTeXCompiler {
@@ -23,6 +21,7 @@ export class BusyTeXCompiler {
         this.wasmUrl = options.wasmUrl || 'busytex.wasm';
         this.workerUrl = options.workerUrl || null; // Will use embedded worker if not provided
         this.ctanProxyUrl = options.ctanProxyUrl || 'http://localhost:8081';
+        this.xzwasmUrl = options.xzwasmUrl || './src/xzwasm.js';
 
         this.bundleManager = new BundleManager({
             bundleBase: this.bundlesUrl,
@@ -31,14 +30,15 @@ export class BusyTeXCompiler {
 
         this.ctanFetcher = new CTANFetcher({
             proxyUrl: this.ctanProxyUrl,
+            xzwasmUrl: this.xzwasmUrl,
             onLog: (msg) => this._log(msg),
         });
 
         this.worker = null;
         this.workerReady = false;
-        this.cachedWasmModule = null;
         this.pendingCompile = null;
         this.formatCache = new Map();
+        this.formatGenerationPromise = null;
 
         this.onLog = options.onLog || (() => {});
         this.onProgress = options.onProgress || (() => {});
@@ -79,39 +79,16 @@ export class BusyTeXCompiler {
     }
 
     async _loadWasm() {
-        this._log('Loading WASM module...');
+        this._log('Loading WASM...');
         const startTime = performance.now();
 
-        // Try to get cached compiled module (instant - no compilation needed!)
-        const cachedModule = await getCompiledWasmModule();
-
-        if (cachedModule) {
-            this.cachedWasmModule = cachedModule;
-            this._log('WASM ready from cache in ' + (performance.now() - startTime).toFixed(0) + 'ms');
-        } else if (window.__wasmCompilePromise) {
-            // Use early-started compilation from inline script (started before module loaded)
-            this._log('Awaiting early-started WASM compilation...');
-            try {
-                this.cachedWasmModule = await window.__wasmCompilePromise;
-                const totalTime = performance.now() - (window.__wasmCompileStart || startTime);
-                this._log('WASM ready in ' + totalTime.toFixed(0) + 'ms (early start)');
-                // Cache compiled module to IndexedDB
-                saveCompiledWasmModule(this.cachedWasmModule).catch(() => {});
-            } catch (e) {
-                this._log('Early compile failed, falling back: ' + e.message);
-                // Fall through to normal loading
-                window.__wasmCompilePromise = null;
-                return this._loadWasm();
-            }
-        } else {
-            // Fallback: Use streaming compilation
-            this._log('Streaming WASM from network (Brotli compressed)...');
+        try {
             const response = await fetch(this.wasmUrl);
-            this._log('Compiling WASM (streaming)...');
-            this.cachedWasmModule = await WebAssembly.compileStreaming(response);
-            this._log('WASM ready in ' + (performance.now() - startTime).toFixed(0) + 'ms');
-            // Cache compiled module to IndexedDB in background
-            saveCompiledWasmModule(this.cachedWasmModule).catch(() => {});
+            this.wasmModule = await WebAssembly.compileStreaming(response);
+            this._log('WASM loaded in ' + (performance.now() - startTime).toFixed(0) + 'ms');
+        } catch (e) {
+            this._log('WASM load failed: ' + e.message);
+            throw e;
         }
     }
 
@@ -155,7 +132,7 @@ export class BusyTeXCompiler {
 
             this.worker.postMessage({
                 type: 'init',
-                wasmModule: this.cachedWasmModule,
+                wasmModule: this.wasmModule,
                 busytexJsUrl,
                 manifest: this.bundleManager.fileManifest,
                 packageMapData: this.bundleManager.packageMap,
@@ -198,6 +175,19 @@ export class BusyTeXCompiler {
             case 'bundle-fetch-request':
                 this._handleBundleFetchRequest(msg);
                 break;
+
+            case 'file-range-fetch-request':
+                this._handleFileRangeFetchRequest(msg).catch(e => {
+                    console.error('[Compiler] file-range-fetch-request error:', e);
+                    this._log('Error handling file range fetch: ' + e.message);
+                });
+                break;
+
+            default:
+                // Log unhandled message types for debugging
+                if (msg.type && !['log', 'progress', 'compile-response', 'format-generate-response'].includes(msg.type)) {
+                    console.log('[Compiler] Unhandled message type:', msg.type);
+                }
         }
     }
 
@@ -296,7 +286,58 @@ export class BusyTeXCompiler {
         }
     }
 
+    async _handleFileRangeFetchRequest(msg) {
+        const { requestId, bundleName, start, end } = msg;
+
+        try {
+            this._log(`Worker requested file range: ${bundleName} [${start}:${end}]`);
+
+            // Fetch using Range request to the uncompressed .raw file
+            const url = `${this.bundlesUrl}/${bundleName}.raw`;
+            const response = await fetch(url, {
+                headers: {
+                    'Range': `bytes=${start}-${end - 1}`,
+                },
+            });
+
+            if (response.status !== 206 && response.status !== 200) {
+                throw new Error(`Range request failed with status ${response.status}`);
+            }
+
+            const data = new Uint8Array(await response.arrayBuffer());
+            this._log(`File range fetched: ${data.length} bytes`);
+
+            this.worker.postMessage({
+                type: 'file-range-fetch-response',
+                requestId,
+                bundleName,
+                start,
+                end,
+                success: true,
+                data,
+            }, [data.buffer]);
+        } catch (e) {
+            this._log('File range fetch error: ' + e.message);
+            this.worker.postMessage({
+                type: 'file-range-fetch-response',
+                requestId,
+                bundleName,
+                start,
+                end,
+                success: false,
+                error: e.message,
+            });
+        }
+    }
+
     async compile(source, options = {}) {
+        // Wait for any pending format generation to complete before checking cache
+        // This ensures the format is available in OPFS for the current compile
+        if (this.formatGenerationPromise) {
+            this._log('Waiting for format generation to complete...');
+            await this.formatGenerationPromise.catch(() => {});
+        }
+
         const engine = options.engine || detectEngine(source);
         const useCache = this.enableDocCache && options.useCache !== false;
 
@@ -323,9 +364,26 @@ export class BusyTeXCompiler {
         const { bundles } = this.bundleManager.checkPackages(source, engine);
         this._log('Required bundles: ' + bundles.join(', '));
 
-        // Load bundle data
+        // Load bundle data and transfer to worker
+        // Worker VFS resets each compile, so bundles must be sent every time
+        // Use transfer (not clone) to avoid duplication - copies are made from cache
         this.onProgress('loading', 'Loading bundles...');
-        const bundleData = await this.bundleManager.loadBundles(bundles);
+        const loadedBundles = await this.bundleManager.loadBundles(bundles);
+
+        let bundleData = {};
+        let transferList = [];
+        let totalBytes = 0;
+
+        for (const [name, data] of Object.entries(loadedBundles)) {
+            if (data) {
+                // Create copy for transfer (original stays in bundleManager cache)
+                const copy = data.slice(0);
+                bundleData[name] = copy;
+                transferList.push(copy);
+                totalBytes += copy.byteLength;
+            }
+        }
+        this._log(`Transferring ${Object.keys(bundleData).length} bundles (${(totalBytes/1024/1024).toFixed(1)}MB)`);
 
         // Get CTAN files from memory cache (populated by previous fetches)
         const ctanFiles = this.ctanFetcher.getCachedFiles();
@@ -348,10 +406,11 @@ export class BusyTeXCompiler {
         const fmtMeta = await getFmtMeta(preambleHash + '_' + engine);
         if (fmtMeta) {
             const fmtData = await readFromOPFS(fmtMeta.fmtPath);
-            if (fmtData) {
+            // Ensure buffer isn't detached (byteLength > 0) and create a fresh copy with slice()
+            if (fmtData && fmtData.buffer.byteLength > 0) {
                 cachedFormat = {
                     fmtName: preambleHash + '_' + engine,
-                    fmtData: new Uint8Array(fmtData),
+                    fmtData: fmtData.slice(),
                 };
                 this._log('Using cached format');
             }
@@ -425,7 +484,8 @@ export class BusyTeXCompiler {
                 ctanFiles,
                 cachedFormat,
                 cachedAuxFiles: auxCache?.files || null,
-            });
+                deferredBundleNames: this.bundleManager.bundleDeps?.deferred || [],
+            }, transferList);
         });
     }
 
@@ -464,7 +524,8 @@ export class BusyTeXCompiler {
         this._log('Generating format file...');
         this.onProgress('format', 'Generating format...');
 
-        return new Promise((resolve, reject) => {
+        // Track this promise so compile() can wait for it
+        this.formatGenerationPromise = new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 if (this.pendingFormat) {
                     this.pendingFormat = null;
@@ -508,7 +569,11 @@ export class BusyTeXCompiler {
                 bundleData,
                 ctanFiles,
             });
+        }).finally(() => {
+            this.formatGenerationPromise = null;
         });
+
+        return this.formatGenerationPromise;
     }
 
     async clearCache() {
@@ -531,5 +596,35 @@ export class BusyTeXCompiler {
             this.worker = null;
             this.workerReady = false;
         }
+    }
+
+    /**
+     * Unload compiler to free memory. Clears RAM caches but keeps disk caches.
+     * Call init() again to reinitialize.
+     */
+    unload() {
+        this._log('Unloading compiler to free memory...');
+
+        // Terminate worker (frees WASM module, heap, worker bundle cache)
+        this.terminate();
+
+        // Clear main thread caches
+        this.bundleManager.clearCache();
+        this.ctanFetcher.clearMountedFiles();
+
+        // Clear format cache
+        this.formatCache.clear();
+
+        // Reset init state so next compile will reinitialize
+        this.initPromise = null;
+
+        this._log('Compiler unloaded');
+    }
+
+    /**
+     * Check if compiler is currently loaded
+     */
+    isLoaded() {
+        return this.worker !== null;
     }
 }

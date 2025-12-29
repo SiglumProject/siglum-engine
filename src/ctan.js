@@ -10,6 +10,12 @@ import {
 
 // Lazy load xzwasm when needed (UMD module loaded via script tag)
 let XzReadableStream = null;
+let xzwasmUrl = './src/xzwasm.js'; // Default, can be overridden
+
+function setXzwasmUrl(url) {
+    xzwasmUrl = url;
+}
+
 async function loadXzwasm() {
     if (XzReadableStream) return XzReadableStream;
 
@@ -21,12 +27,12 @@ async function loadXzwasm() {
             return;
         }
         const script = document.createElement('script');
-        script.src = './src/xzwasm.js';
+        script.src = xzwasmUrl;
         script.onload = () => {
             XzReadableStream = self.xzwasm.XzReadableStream;
             resolve(XzReadableStream);
         };
-        script.onerror = () => reject(new Error('Failed to load xzwasm'));
+        script.onerror = () => reject(new Error('Failed to load xzwasm from ' + xzwasmUrl));
         document.head.appendChild(script);
     });
 }
@@ -99,6 +105,11 @@ export class CTANFetcher {
         this.fileCache = new Map(); // Memory cache for file contents
         this.fetchCount = 0;
         this.onLog = options.onLog || (() => {});
+
+        // Set xzwasm URL if provided
+        if (options.xzwasmUrl) {
+            setXzwasmUrl(options.xzwasmUrl);
+        }
     }
 
     // Get all cached file contents (for passing to worker)

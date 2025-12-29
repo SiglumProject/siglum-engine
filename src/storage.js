@@ -1,5 +1,8 @@
 // Storage module for OPFS and IndexedDB caching
 
+// Safari detection - Safari has issues with ArrayBuffer detachment and WebAssembly.Module serialization
+const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 const IDB_NAME = 'siglum-ctan-cache';
 const IDB_STORE = 'packages';
 const CTAN_CACHE_VERSION = 7;
@@ -74,15 +77,41 @@ export async function listAllCachedPackages() {
 }
 
 // OPFS operations
+let opfsInitAttempted = false;
+let opfsDisabled = false; // Set to true after persistent failures to avoid spam
+
 export async function getOPFSRoot() {
     if (opfsRoot) return opfsRoot;
-    try {
-        opfsRoot = await navigator.storage.getDirectory();
-        return opfsRoot;
-    } catch (e) {
-        console.warn('OPFS not available:', e);
-        return null;
+    if (opfsDisabled) return null; // Don't retry after persistent failure
+
+    // Safari workaround: request persistent storage first to initialize storage subsystem
+    if (!opfsInitAttempted && navigator.storage?.persist) {
+        opfsInitAttempted = true;
+        try {
+            await navigator.storage.persist();
+        } catch (e) {
+            // Ignore - just a workaround attempt
+        }
     }
+
+    // Safari can have transient OPFS failures - retry a few times
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            opfsRoot = await navigator.storage.getDirectory();
+            return opfsRoot;
+        } catch (e) {
+            if (attempt === maxRetries) {
+                // Only log once, then disable OPFS for this session
+                console.warn('OPFS not available, disabling for this session:', e.message || e);
+                opfsDisabled = true;
+                return null;
+            }
+            // Wait briefly before retry (Safari transient errors often resolve quickly)
+            await new Promise(r => setTimeout(r, 100 * attempt));
+        }
+    }
+    return null;
 }
 
 export async function readFromOPFS(filePath) {
@@ -101,7 +130,11 @@ export async function readFromOPFS(filePath) {
         const fileHandle = await current.getFileHandle(fileName);
         const file = await fileHandle.getFile();
         const buffer = await file.arrayBuffer();
-        return new Uint8Array(buffer);
+        // Create a TRUE copy to avoid Safari ArrayBuffer detachment issues
+        // new Uint8Array(buffer) creates a VIEW, not a copy - the buffer can be detached
+        const copy = new Uint8Array(buffer.byteLength);
+        copy.set(new Uint8Array(buffer));
+        return copy;
     } catch (e) {
         return null;
     }
@@ -184,7 +217,11 @@ export async function getBundleFromOPFS(bundleName) {
         const bundlesDir = await root.getDirectoryHandle('bundles');
         const fileHandle = await bundlesDir.getFileHandle(bundleName + '.data');
         const file = await fileHandle.getFile();
-        return await file.arrayBuffer();
+        const buffer = await file.arrayBuffer();
+        // Create a TRUE copy to avoid Safari ArrayBuffer detachment issues
+        const copy = new Uint8Array(buffer.byteLength);
+        copy.set(new Uint8Array(buffer));
+        return copy.buffer;
     } catch (e) {
         return null;
     }
@@ -451,6 +488,11 @@ async function openWasmCacheDb() {
 
 // Get cached compiled WebAssembly.Module from IndexedDB
 export async function getCompiledWasmModule() {
+    // Safari has bugs with WebAssembly.Module serialization in IndexedDB - skip cache entirely
+    if (isSafari) {
+        console.log('Safari detected - skipping WASM module cache (serialization bugs)');
+        return null;
+    }
     try {
         const db = await openWasmCacheDb();
         return new Promise((resolve) => {
@@ -476,6 +518,10 @@ export async function getCompiledWasmModule() {
 
 // Save compiled WebAssembly.Module to IndexedDB
 export async function saveCompiledWasmModule(module) {
+    // Safari has bugs with WebAssembly.Module serialization - don't cache
+    if (isSafari) {
+        return false;
+    }
     try {
         const db = await openWasmCacheDb();
         return new Promise((resolve) => {

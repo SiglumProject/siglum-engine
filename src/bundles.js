@@ -289,6 +289,14 @@ export class BundleManager {
         };
     }
 
+    /**
+     * Clear in-memory bundle cache to free RAM. OPFS cache is preserved.
+     */
+    clearCache() {
+        this.bundleCache.clear();
+        this.onLog('Bundle memory cache cleared');
+    }
+
     // Preload all required bundles for an engine (call during init)
     async preloadEngine(engine = 'pdflatex') {
         await this.loadBundleDeps();

@@ -14,6 +14,14 @@ class VirtualFileSystem {
         this.bundleCache = new Map();
         this.lazyEnabled = options.lazyEnabled || false;
         this.lazyMarkerSymbol = '__siglum_lazy__';
+        this.deferredMarkerSymbol = '__siglum_deferred__';
+
+        // Deferred bundle loading - for font bundles loaded on demand
+        this.deferredBundles = new Map();  // bundleName -> {manifest entries}
+        this.onBundleNeeded = options.onBundleNeeded || null;  // async callback
+
+        // External cache for Range-fetched files (persists across VFS instances)
+        this.fetchedFiles = options.fetchedFilesCache || new Map();
     }
 
     mount(path, content, trackFontMaps = true) {
@@ -45,9 +53,61 @@ class VirtualFileSystem {
         }
     }
 
-    mountBundle(bundleName, bundleData, manifest, bundleMeta = null) {
-        this.bundleCache.set(bundleName, bundleData);
+    /**
+     * Register a bundle as deferred - files are marked but not loaded
+     * When a deferred file is accessed, it triggers a bundle fetch request
+     */
+    mountDeferredBundle(bundleName, manifest, bundleMeta = null) {
+        const bundleFiles = this._getBundleFiles(bundleName, manifest, bundleMeta);
+        if (bundleFiles.length === 0) return 0;
+
+        // Store manifest info for later loading
+        this.deferredBundles.set(bundleName, { files: bundleFiles, manifest, meta: bundleMeta });
+
+        // Create directory structure
+        const dirs = new Set();
+        for (const [path] of bundleFiles) {
+            const dir = path.substring(0, path.lastIndexOf('/'));
+            if (dir) dirs.add(dir);
+        }
+        for (const dir of dirs) this._ensureDirectoryPath(dir);
+
+        // Mount files as deferred markers
         let mounted = 0;
+        for (const [path, info] of bundleFiles) {
+            if (this.mountedFiles.has(path)) continue;
+            this._mountDeferredFile(path, bundleName, info.start, info.end);
+            mounted++;
+        }
+        this.onLog(`Registered ${mounted} deferred files from bundle ${bundleName}`);
+        return mounted;
+    }
+
+    _mountDeferredFile(path, bundleName, start, end) {
+        this._ensureDirectory(path);
+        const dirPath = path.substring(0, path.lastIndexOf('/'));
+        const fileName = path.substring(path.lastIndexOf('/') + 1);
+        try {
+            const parentNode = this.FS.lookupPath(dirPath).node;
+            if (parentNode.contents?.[fileName]) return;
+            const node = this.MEMFS.createNode(parentNode, fileName, 33206, 0);
+            node.contents = this._createDeferredMarker(bundleName, start, end);
+            node.usedBytes = end - start;
+            this.mountedFiles.add(path);
+        } catch (e) {
+            this.onLog(`Failed to mount deferred ${path}: ${e.message}`);
+        }
+    }
+
+    _createDeferredMarker(bundleName, start, end) {
+        return { [this.deferredMarkerSymbol]: true, bundleName, start, end, length: end - start, byteLength: end - start };
+    }
+
+    isDeferredMarker(obj) {
+        return obj && typeof obj === 'object' && obj[this.deferredMarkerSymbol] === true;
+    }
+
+    _getBundleFiles(bundleName, manifest, bundleMeta) {
         const bundleFiles = [];
 
         // Check if bundle files are in the global manifest
@@ -62,6 +122,14 @@ class VirtualFileSystem {
                 bundleFiles.push([fullPath, { start: fileInfo.start, end: fileInfo.end }]);
             }
         }
+
+        return bundleFiles;
+    }
+
+    mountBundle(bundleName, bundleData, manifest, bundleMeta = null) {
+        this.bundleCache.set(bundleName, bundleData);
+        let mounted = 0;
+        const bundleFiles = this._getBundleFiles(bundleName, manifest, bundleMeta);
 
         const dirs = new Set();
         for (const [path] of bundleFiles) {
@@ -270,11 +338,121 @@ class VirtualFileSystem {
         return new Uint8Array(bundleData.slice(marker.start, marker.end));
     }
 
+    /**
+     * Resolve a deferred marker - returns data if bundle loaded, tracks request if not
+     * For per-file loading: tracks individual files to fetch via Range requests
+     */
+    resolveDeferred(marker) {
+        const bundleData = this.bundleCache.get(marker.bundleName);
+        if (bundleData) {
+            // Bundle is now loaded - return the actual data
+            this.onLog(`Deferred resolve: ${marker.bundleName} [${marker.start}:${marker.end}] - loaded`);
+            return new Uint8Array(bundleData.slice(marker.start, marker.end));
+        }
+
+        // Check if file was already fetched individually via Range request
+        const fileKey = `${marker.bundleName}:${marker.start}:${marker.end}`;
+        this.onLog(`Deferred resolve: checking cache for ${fileKey} (cache size: ${this.fetchedFiles.size})`);
+        if (this.fetchedFiles.has(fileKey)) {
+            const data = this.fetchedFiles.get(fileKey);
+            this.onLog(`Deferred resolve: CACHE HIT ${fileKey} (${data.length} bytes)`);
+            return data;
+        }
+        this.onLog(`Deferred resolve: CACHE MISS ${fileKey}`);
+
+        // Track individual file request for Range-based fetching (avoid duplicates)
+        this.pendingDeferredFiles = this.pendingDeferredFiles || [];
+        const alreadyPending = this.pendingDeferredFiles.some(
+            f => f.bundleName === marker.bundleName && f.start === marker.start && f.end === marker.end
+        );
+        if (!alreadyPending) {
+            this.pendingDeferredFiles.push({
+                bundleName: marker.bundleName,
+                start: marker.start,
+                end: marker.end,
+            });
+        }
+        this.onLog(`Deferred resolve: file [${marker.start}:${marker.end}] - requesting Range fetch`);
+
+        // Return empty data - this will cause TeX to fail with a file not found error
+        // The retry loop will detect this and fetch individual files via Range requests
+        return new Uint8Array(0);
+    }
+
+    /**
+     * Store fetched file data for later resolution
+     */
+    storeFetchedFile(bundleName, start, end, data) {
+        const key = `${bundleName}:${start}:${end}`;
+        this.fetchedFiles.set(key, data);
+        this.onLog(`Stored file in cache: ${key} (${data.length} bytes, cache size: ${this.fetchedFiles.size})`);
+    }
+
+    /**
+     * Get list of individual files that need to be fetched via Range requests
+     */
+    getPendingDeferredFiles() {
+        const pending = this.pendingDeferredFiles || [];
+        this.pendingDeferredFiles = [];
+        return pending;
+    }
+
+    /**
+     * Get list of deferred bundles (legacy fallback - not used with per-file loading)
+     */
+    getPendingDeferredBundles() {
+        const pending = this.pendingDeferredBundles ? [...this.pendingDeferredBundles] : [];
+        if (this.pendingDeferredBundles) this.pendingDeferredBundles.clear();
+        return pending;
+    }
+
+    /**
+     * Upgrade deferred markers to lazy markers when bundle is loaded
+     * Call this after a deferred bundle's data is added to bundleCache
+     */
+    activateDeferredBundle(bundleName) {
+        if (!this.bundleCache.has(bundleName)) {
+            this.onLog(`Cannot activate deferred bundle ${bundleName}: not in cache`);
+            return 0;
+        }
+
+        const bundleInfo = this.deferredBundles.get(bundleName);
+        if (!bundleInfo) return 0;
+
+        let activated = 0;
+        for (const [path] of bundleInfo.files) {
+            try {
+                const node = this.FS.lookupPath(path).node;
+                if (this.isDeferredMarker(node.contents)) {
+                    // Convert deferred marker to lazy marker (same structure, different symbol)
+                    const marker = node.contents;
+                    node.contents = this._createLazyMarker(marker.bundleName, marker.start, marker.end);
+                    activated++;
+                }
+            } catch (e) {}
+        }
+
+        this.deferredBundles.delete(bundleName);
+        this.onLog(`Activated ${activated} files from deferred bundle ${bundleName}`);
+        return activated;
+    }
+
     patchForLazyLoading() {
         const vfs = this;
         const ensureResolved = (node) => {
-            if (vfs.isLazyMarker(node.contents)) {
-                const resolved = vfs.resolveLazy(node.contents);
+            // Fast path: if already a Uint8Array, no resolution needed
+            const contents = node.contents;
+            if (contents instanceof Uint8Array) return;
+
+            if (vfs.isLazyMarker(contents)) {
+                const resolved = vfs.resolveLazy(contents);
+                node.contents = resolved;
+                node.usedBytes = resolved.length;
+            } else if (vfs.isDeferredMarker(contents)) {
+                const resolved = vfs.resolveDeferred(contents);
+                // Always replace marker with resolved data (even if empty)
+                // This is required because MEMFS.read expects node.contents to be a Uint8Array
+                // The bundle tracking happens inside resolveDeferred() before returning empty
                 node.contents = resolved;
                 node.usedBytes = resolved.length;
             }
@@ -378,9 +556,20 @@ let packageMap = null;
 let bundleDeps = null;
 let bundleRegistry = null;
 
+// Global Module instance - reused across compilations to avoid memory leaks
+// Each initBusyTeX call creates a 512MB WASM heap; we want only ONE
+let globalModule = null;
+let globalModulePromise = null;
+
 // Pending requests
 const pendingCtanRequests = new Map();
 const pendingBundleRequests = new Map();
+const pendingFileRangeRequests = new Map();
+const globalFetchedFilesCache = new Map();  // Persist Range-fetched files across compiles
+
+// Operation queue to serialize compile and format-generate operations
+// (async onmessage doesn't block new messages from being processed concurrently)
+let operationQueue = Promise.resolve();
 
 function workerLog(msg) {
     self.postMessage({ type: 'log', message: msg });
@@ -429,6 +618,28 @@ function requestBundleFetch(bundleName) {
                 reject(new Error('Bundle fetch timeout'));
             }
         }, 60000);
+    });
+}
+
+function requestFileRangeFetch(bundleName, start, end) {
+    return new Promise((resolve, reject) => {
+        const requestId = crypto.randomUUID();
+        pendingFileRangeRequests.set(requestId, { resolve, reject });
+
+        self.postMessage({
+            type: 'file-range-fetch-request',
+            requestId,
+            bundleName,
+            start,
+            end,
+        });
+
+        setTimeout(() => {
+            if (pendingFileRangeRequests.has(requestId)) {
+                pendingFileRangeRequests.delete(requestId);
+                reject(new Error('File range fetch timeout'));
+            }
+        }, 30000);
     });
 }
 
@@ -584,13 +795,71 @@ async function initBusyTeX(wasmModule, jsUrl) {
     return Module;
 }
 
+/**
+ * Create a fresh Module instance for each operation
+ *
+ * Note: We previously tried reusing a globalModule to avoid memory leaks,
+ * but pdfTeX has internal C globals (glyph_unicode_tree, etc.) that don't
+ * reset between invocations, causing assertion failures in format generation.
+ * Until we can properly reset pdfTeX state, each operation needs a fresh Module.
+ */
+async function getOrCreateModule() {
+    // Always create fresh Module - pdfTeX internal state doesn't reset properly
+    return await initBusyTeX(cachedWasmModule, busytexJsUrl);
+}
+
+/**
+ * Reset the filesystem for a fresh compilation
+ * Removes all files except core TeX directories
+ */
+function resetFS(FS) {
+    // Remove /texlive entirely and recreate structure
+    try {
+        // Remove dynamically created directories
+        const dirsToClean = ['/texlive', '/document.pdf', '/document.log', '/document.aux'];
+        for (const path of dirsToClean) {
+            try {
+                const stat = FS.stat(path);
+                if (FS.isDir(stat.mode)) {
+                    // Recursively remove directory
+                    const removeDir = (dirPath) => {
+                        try {
+                            const contents = FS.readdir(dirPath);
+                            for (const name of contents) {
+                                if (name === '.' || name === '..') continue;
+                                const fullPath = dirPath + '/' + name;
+                                const s = FS.stat(fullPath);
+                                if (FS.isDir(s.mode)) {
+                                    removeDir(fullPath);
+                                } else {
+                                    FS.unlink(fullPath);
+                                }
+                            }
+                            FS.rmdir(dirPath);
+                        } catch (e) {}
+                    };
+                    removeDir(path);
+                } else {
+                    FS.unlink(path);
+                }
+            } catch (e) {}
+        }
+    } catch (e) {
+        workerLog('FS reset warning: ' + e.message);
+    }
+}
+
 // ============ Compilation ============
 
 async function handleCompile(request) {
-    const { id, source, engine, options, bundleData, ctanFiles, cachedFormat, cachedAuxFiles } = request;
+    const { id, source, engine, options, bundleData, ctanFiles, cachedFormat, cachedAuxFiles, deferredBundleNames } = request;
 
     workerLog('=== Compilation Started ===');
     const totalStart = performance.now();
+
+    // Fallback to bundleDeps.deferred if not passed in message (for older compilers)
+    const effectiveDeferredBundles = deferredBundleNames || bundleDeps?.deferred || [];
+    workerLog(`deferredBundleNames: ${JSON.stringify(effectiveDeferredBundles)}`);
 
     if (!fileManifest) throw new Error('fileManifest not set');
 
@@ -598,6 +867,9 @@ async function handleCompile(request) {
     const bundleDataMap = bundleData instanceof Map ? bundleData : new Map(Object.entries(bundleData));
     const bundleMetaMap = new Map(); // Store bundle metadata for dynamically loaded bundles
     const accumulatedCtanFiles = new Map();
+
+    // Bundles to load on-demand (e.g., font bundles like cm-super)
+    const deferredBundles = new Set(effectiveDeferredBundles);
 
     if (ctanFiles) {
         const ctanFilesMap = ctanFiles instanceof Map ? ctanFiles : new Map(Object.entries(ctanFiles));
@@ -609,6 +881,7 @@ async function handleCompile(request) {
     let retryCount = 0;
     const maxRetries = 10;
     const fetchedPackages = new Set();
+    // Use global cache for Range-fetched files (persists across compiles)
     let lastExitCode = -1;
     let Module = null;
     let FS = null;
@@ -619,25 +892,39 @@ async function handleCompile(request) {
         }
 
         try {
-            // Initialize fresh WASM instance
-            Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
+            // Get or create global WASM instance (reused to avoid memory leaks)
+            Module = await getOrCreateModule();
             FS = Module.FS;
+
+            // Reset filesystem for clean compilation
+            resetFS(FS);
 
             // Create VFS with unified mount handling
             const vfs = new VirtualFileSystem(FS, {
                 onLog: workerLog,
-                lazyEnabled: options.enableLazyFS
+                lazyEnabled: options.enableLazyFS,
+                fetchedFilesCache: globalFetchedFilesCache  // Persist across compiles
             });
 
-            if (options.enableLazyFS) {
+            // Only patch for lazy loading once (on first use)
+            if (options.enableLazyFS && !Module._lazyPatchApplied) {
                 vfs.patchForLazyLoading();
+                Module._lazyPatchApplied = true;
             }
 
-            // Mount all bundles
+            // Mount all bundles (regular and deferred)
             workerProgress('mount', 'Mounting files...');
             for (const [bundleName, data] of bundleDataMap) {
                 const meta = bundleMetaMap.get(bundleName) || null;
                 vfs.mountBundle(bundleName, data, fileManifest, meta);
+            }
+
+            // Mount deferred bundles (file markers without data - loaded on demand)
+            for (const bundleName of deferredBundles) {
+                if (!bundleDataMap.has(bundleName)) {
+                    const count = vfs.mountDeferredBundle(bundleName, fileManifest, null);
+                    workerLog(`Deferred bundle ${bundleName}: mounted ${count} file markers`);
+                }
             }
 
             // Mount CTAN files
@@ -660,12 +947,17 @@ async function handleCompile(request) {
                 ? '/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex.fmt'
                 : '/texlive/texmf-dist/texmf-var/web2c/xetex/xelatex.fmt';
 
-            if (cachedFormat && engine === 'pdflatex') {
-                FS.writeFile('/custom.fmt', cachedFormat.fmtData);
-                fmtPath = '/custom.fmt';
-                workerLog('Using custom format');
-                const beginDocIdx = source.indexOf('\\begin{document}');
-                if (beginDocIdx !== -1) docSource = source.substring(beginDocIdx);
+            if (cachedFormat && engine === 'pdflatex' && cachedFormat.fmtData) {
+                // Verify buffer isn't detached before using
+                if (cachedFormat.fmtData.buffer && cachedFormat.fmtData.buffer.byteLength > 0) {
+                    FS.writeFile('/custom.fmt', cachedFormat.fmtData);
+                    fmtPath = '/custom.fmt';
+                    workerLog('Using custom format');
+                    const beginDocIdx = source.indexOf('\\begin{document}');
+                    if (beginDocIdx !== -1) docSource = source.substring(beginDocIdx);
+                } else {
+                    workerLog('Custom format buffer is detached, using default format');
+                }
             }
 
             if (engine === 'pdflatex' && !cachedFormat) {
@@ -711,51 +1003,107 @@ async function handleCompile(request) {
                 }
             }
 
-            // Handle missing files
-            if (!compileSuccess && options.enableCtan) {
-                let logContent = '';
-                try { logContent = new TextDecoder().decode(FS.readFile('/document.log')); } catch (e) {}
-                const allOutput = logContent + ' ' + (result.stdout || '') + ' ' + (result.stderr || '');
-                const missingFile = extractMissingFile(allOutput, fetchedPackages);
+            // Handle missing files and deferred bundles
+            if (!compileSuccess) {
+                // First, check for individual file Range requests (more efficient than full bundle)
+                const pendingFiles = vfs.getPendingDeferredFiles();
+                if (pendingFiles.length > 0) {
+                    workerLog(`Fetching ${pendingFiles.length} individual files via Range requests...`);
+                    let fetchedAny = false;
+                    for (const fileReq of pendingFiles) {
+                        try {
+                            const fileResult = await requestFileRangeFetch(fileReq.bundleName, fileReq.start, fileReq.end);
+                            if (fileResult.success) {
+                                vfs.storeFetchedFile(fileReq.bundleName, fileReq.start, fileReq.end, fileResult.data);
+                                fetchedAny = true;
+                                workerLog(`Loaded file bytes [${fileReq.start}:${fileReq.end}] (${fileResult.data.length} bytes)`);
+                            }
+                        } catch (e) {
+                            workerLog(`Failed to fetch file range: ${e.message}`);
+                        }
+                    }
+                    if (fetchedAny) {
+                        retryCount++;
+                        continue;
+                    }
+                }
 
-                if (missingFile) {
-                    const pkgName = getPackageFromFile(missingFile);
-
-                    // Try bundle first (compressed, fast)
-                    const bundleName = packageMap?.[pkgName];
-                    if (bundleName && !bundleDataMap.has(bundleName)) {
-                        workerLog(`Missing: ${missingFile}, loading bundle ${bundleName}...`);
+                // Fallback: check if any deferred bundles were accessed but not loaded
+                const pendingDeferred = vfs.getPendingDeferredBundles();
+                workerLog(`Checking pending deferred bundles: ${pendingDeferred.length > 0 ? pendingDeferred.join(', ') : 'none'}`);
+                if (pendingDeferred.length > 0) {
+                    workerLog(`Deferred bundles needed: ${pendingDeferred.join(', ')}`);
+                    let fetchedAny = false;
+                    for (const bundleName of pendingDeferred) {
+                        if (bundleDataMap.has(bundleName)) continue;
                         try {
                             const bundleResult = await requestBundleFetch(bundleName);
                             if (bundleResult.success) {
-                                fetchedPackages.add(pkgName);
                                 bundleDataMap.set(bundleName, bundleResult.bundleData);
                                 if (bundleResult.bundleMeta) {
                                     bundleMetaMap.set(bundleName, bundleResult.bundleMeta);
+                                }
+                                // Remove from deferred set since it's now loaded
+                                deferredBundles.delete(bundleName);
+                                fetchedAny = true;
+                                workerLog(`Loaded deferred bundle: ${bundleName}`);
+                            }
+                        } catch (e) {
+                            workerLog(`Failed to load deferred bundle ${bundleName}: ${e.message}`);
+                        }
+                    }
+                    if (fetchedAny) {
+                        retryCount++;
+                        continue;
+                    }
+                }
+
+                // Then check for missing files via log parsing (CTAN fallback)
+                if (options.enableCtan) {
+                    let logContent = '';
+                    try { logContent = new TextDecoder().decode(FS.readFile('/document.log')); } catch (e) {}
+                    const allOutput = logContent + ' ' + (result.stdout || '') + ' ' + (result.stderr || '');
+                    const missingFile = extractMissingFile(allOutput, fetchedPackages);
+
+                    if (missingFile) {
+                        const pkgName = getPackageFromFile(missingFile);
+
+                        // Try bundle first (compressed, fast)
+                        const bundleName = packageMap?.[pkgName];
+                        if (bundleName && !bundleDataMap.has(bundleName)) {
+                            workerLog(`Missing: ${missingFile}, loading bundle ${bundleName}...`);
+                            try {
+                                const bundleResult = await requestBundleFetch(bundleName);
+                                if (bundleResult.success) {
+                                    fetchedPackages.add(pkgName);
+                                    bundleDataMap.set(bundleName, bundleResult.bundleData);
+                                    if (bundleResult.bundleMeta) {
+                                        bundleMetaMap.set(bundleName, bundleResult.bundleMeta);
+                                    }
+                                    retryCount++;
+                                    continue;
+                                }
+                            } catch (e) {
+                                workerLog(`Bundle fetch failed: ${e.message}, trying CTAN...`);
+                            }
+                        }
+
+                        // Fall back to CTAN
+                        workerLog(`Missing: ${missingFile}, fetching ${pkgName} from CTAN...`);
+                        try {
+                            const ctanData = await requestCtanFetch(pkgName);
+                            if (ctanData.success) {
+                                fetchedPackages.add(pkgName);
+                                const files = ctanData.files instanceof Map ? ctanData.files : new Map(Object.entries(ctanData.files));
+                                for (const [path, content] of files) {
+                                    accumulatedCtanFiles.set(path, content);
                                 }
                                 retryCount++;
                                 continue;
                             }
                         } catch (e) {
-                            workerLog(`Bundle fetch failed: ${e.message}, trying CTAN...`);
+                            workerLog(`CTAN fetch failed: ${e.message}`);
                         }
-                    }
-
-                    // Fall back to CTAN
-                    workerLog(`Missing: ${missingFile}, fetching ${pkgName} from CTAN...`);
-                    try {
-                        const ctanData = await requestCtanFetch(pkgName);
-                        if (ctanData.success) {
-                            fetchedPackages.add(pkgName);
-                            const files = ctanData.files instanceof Map ? ctanData.files : new Map(Object.entries(ctanData.files));
-                            for (const [path, content] of files) {
-                                accumulatedCtanFiles.set(path, content);
-                            }
-                            retryCount++;
-                            continue;
-                        }
-                    } catch (e) {
-                        workerLog(`CTAN fetch failed: ${e.message}`);
                     }
                 }
             }
@@ -813,8 +1161,12 @@ async function handleFormatGenerate(request) {
 
     while (retryCount < maxRetries) {
         try {
-            const Module = await initBusyTeX(cachedWasmModule, busytexJsUrl);
+            // Get or create global WASM instance (reused to avoid memory leaks)
+            const Module = await getOrCreateModule();
             const FS = Module.FS;
+
+            // Reset filesystem for clean format generation
+            resetFS(FS);
 
             const vfs = new VirtualFileSystem(FS, { onLog: workerLog });
 
@@ -914,7 +1266,7 @@ self.onmessage = async function(e) {
 
     switch (msg.type) {
         case 'init':
-            cachedWasmModule = msg.wasmModule;
+            // Compile WASM directly in worker to avoid 30MB duplication via postMessage
             busytexJsUrl = msg.busytexJsUrl;
             if (msg.manifest) {
                 fileManifest = msg.manifest;
@@ -922,15 +1274,23 @@ self.onmessage = async function(e) {
                 bundleDeps = msg.bundleDepsData;
                 bundleRegistry = new Set(msg.bundleRegistryData || []);
             }
+
+            cachedWasmModule = msg.wasmModule;
             self.postMessage({ type: 'ready' });
             break;
 
         case 'compile':
-            await handleCompile(msg);
+            // Queue compile operations to prevent concurrent execution
+            operationQueue = operationQueue.then(() => handleCompile(msg)).catch(e => {
+                workerLog(`Compile queue error: ${e.message}`);
+            });
             break;
 
         case 'generate-format':
-            await handleFormatGenerate(msg);
+            // Queue format operations to prevent concurrent execution
+            operationQueue = operationQueue.then(() => handleFormatGenerate(msg)).catch(e => {
+                workerLog(`Format queue error: ${e.message}`);
+            });
             break;
 
         case 'ctan-fetch-response':
@@ -948,6 +1308,15 @@ self.onmessage = async function(e) {
                 pendingBundleRequests.delete(msg.requestId);
                 if (msg.success) pendingBundle.resolve(msg);
                 else pendingBundle.reject(new Error(msg.error || 'Bundle fetch failed'));
+            }
+            break;
+
+        case 'file-range-fetch-response':
+            const pendingFileRange = pendingFileRangeRequests.get(msg.requestId);
+            if (pendingFileRange) {
+                pendingFileRangeRequests.delete(msg.requestId);
+                if (msg.success) pendingFileRange.resolve(msg);
+                else pendingFileRange.reject(new Error(msg.error || 'File range fetch failed'));
             }
             break;
     }

@@ -1,6 +1,7 @@
 {
   "$schema": "bundle-deps-schema.json",
   "$comment": "Bundle dependency configuration - declarative rules for what bundles to load",
+  "deferred": ["cm-super"],
   "engines": {
     "xelatex": {
       "required": [
@@ -24,8 +25,7 @@
         "fonts-misc",
         "fonts-lm-type1",
         "dvips",
-        "extra",
-        "cm-super"
+        "extra"
       ]
     },
     "lualatex": {
