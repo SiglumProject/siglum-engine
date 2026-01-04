@@ -3,22 +3,10 @@
   "files": [
     {
       "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
-      "name": "pdfetex.fmt",
-      "start": 0,
-      "end": 127495
-    },
-    {
-      "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
       "name": "pdflatex.fmt",
-      "start": 127495,
-      "end": 6605059
-    },
-    {
-      "path": "/texlive/texmf-dist/texmf-var/web2c/pdftex",
-      "name": "pdftex.fmt",
-      "start": 6605059,
-      "end": 6732563
+      "start": 0,
+      "end": 6544607
     }
   ],
-  "totalSize": 6732563
+  "totalSize": 6544607
 }

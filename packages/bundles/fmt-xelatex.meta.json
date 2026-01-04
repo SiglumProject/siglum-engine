@@ -5,14 +5,8 @@
       "path": "/texlive/texmf-dist/texmf-var/web2c/xetex",
       "name": "xelatex.fmt",
       "start": 0,
-      "end": 8714726
-    },
-    {
-      "path": "/texlive/texmf-dist/texmf-var/web2c/xetex",
-      "name": "xetex.fmt",
-      "start": 8714726,
-      "end": 11005248
+      "end": 20249854
     }
   ],
-  "totalSize": 11005248
+  "totalSize": 20249854
 }

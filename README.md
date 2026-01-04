@@ -1,38 +1,22 @@
-# busytex-lazy
+# siglum
 
-A lazy-loading infrastructure layer for [BusyTeX](https://github.com/busytex/busytex), enabling browser-based LaTeX compilation without downloading the entire TeX Live distribution upfront.
+The fastest browser-based LaTeX compiler. TeX Live 2025 running in WebAssembly, with lazy loading and on-demand package resolution.
 
-## The Problem
+- **~800KB initial download** — not 30MB like other solutions
+- **~150ms cached compiles** — faster than server round-trips
+- **Works offline** — after first load, no network needed
+- **Any CTAN package** — fetched automatically when your document needs it
 
-TeX Live is massive. A minimal pdflatex installation is 100MB+, and supporting common packages pushes it to 500MB+. Loading this upfront makes browser-based LaTeX impractical for most use cases.
+## Setup
 
-## The Solution
+```bash
+npm install siglum
+```
 
-**busytex-lazy** splits TeX Live into small bundles (~1-10MB each) that are loaded on-demand during compilation:
+```javascript
+import { BusyTeXCompiler } from 'siglum';
 
-1. **Initial load**: Only core bundles (~15MB compressed) for basic documents
-2. **On-demand loading**: Additional packages fetched as the document requires them
-3. **CTAN fallback**: Missing packages automatically downloaded from CTAN mirrors
-4. **Persistent caching**: OPFS/IndexedDB storage eliminates repeat downloads
-
-## Installation
-
-### ES Modules (Browser)
-
-busytex-lazy is designed for direct browser usage with ES modules - no bundler required:
-
-```html
-<script type="module">
-import { BusyTeXCompiler } from './src/index.js';
-
-const compiler = new BusyTeXCompiler({
-    bundlesUrl: 'packages/bundles',
-    wasmUrl: 'busytex.wasm',
-    ctanProxyUrl: 'http://localhost:8081',
-    onLog: (msg) => console.log(msg),
-    onProgress: (stage, detail) => console.log(`${stage}: ${detail}`),
-});
-
+const compiler = new BusyTeXCompiler();
 await compiler.init();
 
 const result = await compiler.compile(`
@@ -46,366 +30,148 @@ if (result.success) {
     const blob = new Blob([result.pdf], { type: 'application/pdf' });
     window.open(URL.createObjectURL(blob));
 }
-</script>
 ```
 
-### Available Exports
+## How it works
 
-```javascript
-// Main compiler class
-import { BusyTeXCompiler } from './src/index.js';
+On first use, siglum downloads a TeX engine and core LaTeX packages. Compilation runs in a Web Worker. After the engine and packages are cached, it works offline.
 
-// Bundle management
-import { BundleManager, detectEngine, extractPreamble, hashPreamble } from './src/index.js';
+- Supported engines: pdfLaTeX and XeLaTeX.
+- Common packages are bundled; others load from CTAN as needed.
+- Custom fonts via fontspec (with XeLaTeX).
 
-// CTAN package fetching
-import { CTANFetcher, getPackageFromFile, isValidPackageName } from './src/index.js';
-
-// Storage utilities
-import { clearCTANCache, hashDocument, getCachedPdf, saveCachedPdf, listAllCachedPackages } from './src/index.js';
-```
-
-### Compiler Options
+## Configuration
 
 ```javascript
 const compiler = new BusyTeXCompiler({
-    bundlesUrl: 'packages/bundles',  // Path to bundle files
-    wasmUrl: 'busytex.wasm',         // Path to BusyTeX WASM
-    workerUrl: null,                 // Custom worker URL (uses embedded if null)
-    ctanProxyUrl: 'http://localhost:8081',  // CTAN proxy server
-    enableCtan: true,                // Enable CTAN fallback for missing packages
-    enableLazyFS: true,              // Enable lazy file loading
-    enableDocCache: true,            // Cache compiled PDFs
-    onLog: (msg) => {},              // Log callback
-    onProgress: (stage, detail) => {},  // Progress callback
+    bundlesUrl: 'https://siglum-api.vtp-ips.workers.dev/bundles',
+    wasmUrl: 'https://siglum-api.vtp-ips.workers.dev/wasm/busytex.wasm',
+    ctanProxyUrl: 'https://siglum-api.vtp-ips.workers.dev',
+    enableCtan: true,
+    enableLazyFS: true,
+    onLog: (msg) => console.log(msg),
+    onProgress: (stage, detail) => console.log(`${stage}: ${detail}`),
 });
 ```
 
-### Compilation Options
+## Compilation
 
 ```javascript
 const result = await compiler.compile(source, {
-    engine: 'pdflatex',  // 'pdflatex' | 'xelatex' | 'lualatex' (auto-detected if not specified)
-    useCache: true,      // Use cached PDF if available
-    additionalFiles: {}, // Custom files to include (see below)
+    engine: 'pdflatex',  // 'pdflatex' | 'xelatex' | 'auto'
 });
 
-// Result object
-{
-    success: boolean,
-    pdf: Uint8Array,     // PDF data (if successful)
-    cached: boolean,     // Whether result came from cache
-    error: string,       // Error message (if failed)
-    log: string,         // LaTeX log output
-    stats: object,       // Compilation statistics
-}
+// result.success - boolean
+// result.pdf     - Uint8Array (if successful)
+// result.log     - LaTeX log output
+// result.error   - error message (if failed)
 ```
 
-### Custom Files (additionalFiles)
+## Custom files
 
-You can include custom `.sty`, `.cls`, `.bib`, images, or any other files that aren't available in TeX Live or CTAN:
+Include `.sty`, `.cls`, `.bib`, images, or fonts:
 
 ```javascript
-// From file input or drag & drop
-const fileInput = document.getElementById('fileInput');
-const additionalFiles = {};
+const additionalFiles = {
+    'custom.sty': new TextEncoder().encode(`
+        \\ProvidesPackage{custom}
+        \\newcommand{\\hello}{Hello!}
+    `),
+};
 
-for (const file of fileInput.files) {
-    const content = await file.arrayBuffer();
-    additionalFiles[file.name] = new Uint8Array(content);
-}
-
-// Or programmatically
-additionalFiles['custom.sty'] = new TextEncoder().encode(`
-\\ProvidesPackage{custom}
-\\newcommand{\\hello}{Hello from custom package!}
-`);
-
-// Include in compilation
 const result = await compiler.compile(source, { additionalFiles });
 ```
 
-### Custom Fonts
-
-**XeLaTeX/LuaLaTeX** can use custom OpenType/TrueType fonts via fontspec:
+## Custom fonts (XeLaTeX)
 
 ```latex
 \documentclass{article}
 \usepackage{fontspec}
-\setmainfont[Path=./]{MyCustomFont.otf}
+\setmainfont[Path=./]{MyFont.otf}
 \begin{document}
 Hello with my custom font!
 \end{document}
 ```
 
-Upload `MyCustomFont.otf` or `.ttf` file, then reference it with `Path=./` to load from the working directory.
+Upload the font file via `additionalFiles`, then reference it with `Path=./`.
 
-**pdfLaTeX** cannot use uploaded fonts directly - it requires pre-installed TeX fonts with `.tfm`, `.pfb`, and font map entries. Use the bundled fonts (Computer Modern, Latin Modern, cm-super) or switch to XeLaTeX.
+## Bundle system
 
-**Supported upload formats:** `.sty`, `.cls`, `.bst`, `.bib`, `.tex`, `.png`, `.jpg`, `.pdf`, `.eps`, `.otf`, `.ttf`, `.woff`, `.woff2`
+Bundles are pre-packaged collections of TeX files that load on demand:
 
-## Prerequisites
-
-This project uses [BusyTeX](https://github.com/busytex/busytex) as a git submodule. After cloning, you need to build or download the WASM files:
-
-```bash
-# Clone with submodules
-git clone --recurse-submodules <repo-url>
-
-# Build BusyTeX (requires emscripten)
-cd busytex
-make wasm
-cp build/wasm/busytex.js build/wasm/busytex.wasm ..
-cd ..
-```
-
-Or download pre-built binaries from the [BusyTeX releases](https://github.com/busytex/busytex/releases).
-
-## Quick Start
-
-```bash
-# Start a local server
-python3 -m http.server 8080
-
-# (Optional) Start CTAN proxy for package fallback
-cd packages && bun run ctan-proxy.ts
-
-# Open in browser
-open http://localhost:8080/split-bundle-lazy.html
-```
-
-The demo page includes a full-featured editor with:
-- Engine selection (pdflatex, xelatex, lualatex)
-- Custom format generation (pre-compile preambles for faster subsequent compiles)
-- PDF preview
-- Automatic CTAN package fetching
-
-## Bundle System
-
-Bundles are pre-packaged collections of TeX files:
-
-| Bundle | Contents | Size (gzip) |
-|--------|----------|-------------|
-| `core` | LaTeX kernel, base classes | ~2MB |
-| `fmt-pdflatex` | pdflatex format file | ~3MB |
-| `l3` | LaTeX3 packages (expl3, xparse) | ~2MB |
-| `fonts-cm` | Computer Modern fonts | ~1MB |
-| `amsmath` | AMS math packages | ~500KB |
-| `graphics` | graphicx, color, etc. | ~300KB |
+| Bundle | Contents | Size |
+|--------|----------|------|
+| `core` | LaTeX kernel, base classes | ~750KB |
+| `fmt-pdflatex` | pdflatex format file | ~1.7MB |
+| `fmt-xelatex` | xelatex format file | ~4.6MB |
+| `l3` | LaTeX3 packages | ~280KB |
+| `amsmath` | AMS math packages | ~120KB |
+| `fonts-lm` | Latin Modern fonts | ~2MB |
+| `graphics` | graphicx, xcolor | ~300KB |
 | `tikz` | TikZ/PGF graphics | ~5MB |
-| ... | 30+ more bundles | varies |
 
-### Bundle Structure
+When a package isn't bundled, siglum fetches it from CTAN automatically.
 
-```
-packages/bundles/
-├── core.data.gz          # Compressed file contents
-├── core.meta.json        # File paths, offsets, sizes
-├── amsmath.data.gz
-├── amsmath.meta.json
-├── registry.json         # Available bundles
-├── package-map.json      # Package name -> bundle mapping
-├── file-manifest.json    # File path -> bundle mapping
-└── bundle-deps.json      # Bundle dependency graph
-```
+## Engine support
 
-## CTAN Fallback
-
-When a package isn't in any bundle, busytex-lazy fetches it from CTAN:
-
-1. Compilation fails with "file not found"
-2. System extracts package name from the missing file path
-3. CTAN API queried for package metadata
-4. Package files downloaded and mounted
-5. Compilation retried automatically
-
-This provides access to all 6000+ CTAN packages without bundling them.
-
-## Architecture
-
-```
-┌─────────────────┐     ┌─────────────────┐
-│   Main Thread   │     │  Compile Worker │
-├─────────────────┤     ├─────────────────┤
-│ - UI updates    │────▶│ - WASM runtime  │
-│ - OPFS caching  │     │ - Bundle mount  │
-│ - Bundle fetch  │◀────│ - Compilation   │
-│ - PDF render    │     │ - Font handling │
-└─────────────────┘     └─────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Storage Layer  │
-├─────────────────┤
-│ - OPFS (fast)   │
-│ - IndexedDB     │
-│ - Fetch cache   │
-└─────────────────┘
-```
-
-## Engine Support
-
-| Engine | Status | Notes |
-|--------|--------|-------|
-| pdflatex | Working | Primary focus |
-| xelatex | Working | Requires OTF font bundles |
-| lualatex | Partial | Large format files |
-
-## Known Limitations
-
-- **kpathsea quirks**: Font path resolution in WASM requires absolute paths; font maps are rewritten automatically
-- **Large documents**: Memory pressure with 100+ page documents
-- **Some packages**: Packages requiring shell escape or external tools won't work
-- **Font subsetting**: Not supported; full fonts embedded in PDFs
+| Engine | Status |
+|--------|--------|
+| pdfLaTeX | Full support, format caching |
+| XeLaTeX | Full support, no format caching (native fonts) |
+| LuaLaTeX | Not yet available |
 
 ## Performance
 
-Typical first-compile times (cold cache):
+| Metric | Value |
+|--------|-------|
+| Initial download | ~800KB |
+| First compile (cold) | ~2s |
+| Cached compile | ~150ms |
+| Full bundle cache | ~15MB |
 
-| Document Type | Time | Data Downloaded |
-|--------------|------|-----------------|
-| Hello World | ~2s | ~15MB |
-| Article with math | ~4s | ~20MB |
-| Beamer presentation | ~8s | ~35MB |
-| Full memoir book | ~15s | ~50MB |
+## Acknowledgments
 
-Subsequent compiles with warm cache: 1-3s regardless of complexity.
+siglum builds on [BusyTeX](https://github.com/busytex/busytex), which first compiled TeX Live to WebAssembly.
 
-## Project Structure
+We extended it with:
 
-```
-.
-├── src/                    # ES module source files
-│   ├── index.js            # Main entry point (exports all public APIs)
-│   ├── compiler.js         # BusyTeXCompiler class
-│   ├── bundles.js          # BundleManager, engine detection, preamble handling
-│   ├── ctan.js             # CTANFetcher for missing package resolution
-│   ├── storage.js          # OPFS/IndexedDB caching layer
-│   └── worker.js           # Web Worker for off-main-thread compilation
-├── busytex/                # BusyTeX submodule (build to get .js/.wasm)
-├── busytex.js              # BusyTeX WASM JavaScript (built from submodule)
-├── busytex.wasm            # BusyTeX WebAssembly binary (built from submodule)
-├── split-bundle-lazy.html  # Demo application
-├── README.md
-└── packages/
-    ├── bundles/            # Pre-built TeX bundles
-    │   ├── *.data.gz       # Compressed bundle data
-    │   ├── *.meta.json     # Bundle metadata
-    │   ├── registry.json   # Bundle registry
-    │   ├── package-map.json
-    │   ├── file-manifest.json
-    │   └── bundle-deps.json
-    └── ctan-proxy.ts       # Development CTAN proxy server
-```
-
-### Module Overview
-
-| Module | Description |
-|--------|-------------|
-| `compiler.js` | Main orchestrator - initializes worker, handles compile requests, manages caching |
-| `bundles.js` | Loads bundle manifests, resolves package dependencies, detects required engine |
-| `ctan.js` | Fetches missing packages from CTAN, caches to OPFS |
-| `storage.js` | OPFS and IndexedDB operations for persistent caching |
-| `worker.js` | Runs in Web Worker - mounts bundles, executes WASM, returns PDF |
+- **TeX Live 2025** — updated from TL2022 to the latest release
+- **Lazy bundle system** — packages grouped into small bundles that load on demand
+- **Deferred file loading** — individual files within bundles load only when TeX requests them
+- **CTAN resolution** — packages not in bundles are fetched from CTAN automatically
+- **Multi-engine builds** — unified WASM binary supporting pdfTeX and XeTeX
+- **Browser caching** — WASM modules cached in IndexedDB, bundles in OPFS
+- **Format file generation** — preamble caching for sub-second repeat compiles
 
 ## Development
 
-### Running Locally
-
 ```bash
-# Start file server
-python3 -m http.server 8080
+# Start local dev server
+bun run serve-local.ts
 
-# (Optional) Start CTAN proxy for package fallback
-cd packages && bun run ctan-proxy.ts
-
-# Open demo in browser
-open http://localhost:8080/split-bundle-lazy.html  # Standalone demo
-open http://localhost:8080/demo.html               # ES modules demo
+# Server runs at http://localhost:8787
+#   /bundles/*  -> ./packages/bundles/
+#   /wasm/*     -> ./busytex/build/wasm/
+#   /api/fetch/ -> CTAN proxy
 ```
 
-### Using in Your Project
+## Project structure
 
-Copy the `src/` directory and `packages/bundles/` to your project, then import:
-
-```javascript
-import { BusyTeXCompiler } from './src/index.js';
 ```
-
-Requirements:
-- Serve with `Content-Type: application/javascript` for `.js` files
-- CORS headers if loading bundles from a different origin
-- CTAN proxy running for dynamic package resolution (optional)
-
-### Modifying Bundles
-
-After modifying bundle files, regenerate the indices:
-
-```bash
-cd packages/bundles
-python3 sync-package-map.py
+.
+├── src/                    # ES module source
+│   ├── index.js            # Main exports
+│   ├── compiler.js         # BusyTeXCompiler class
+│   ├── bundles.js          # Bundle loading
+│   ├── ctan.js             # CTAN package fetching
+│   ├── storage.js          # OPFS/IndexedDB caching
+│   └── worker.js           # Web Worker
+├── busytex/                # Build toolchain (submodule)
+├── packages/
+│   └── bundles/            # Pre-built TeX bundles
+└── serve-local.ts          # Local dev server
 ```
-
-## Public API
-
-We provide free public services for TeX bundles and CTAN package fetching. Anyone can use them:
-
-```javascript
-const compiler = new BusyTeXCompiler({
-    bundlesUrl: 'https://packages.siglum.org',
-    wasmUrl: 'https://packages.siglum.org/wasm/busytex.wasm',
-    ctanProxyUrl: 'https://ctan-proxy.siglum.org',
-});
-```
-
-### Services
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Demo | `busytex-lazy.siglum.org` | Interactive demo application |
-| Packages | `packages.siglum.org` | Bundle and WASM file hosting |
-| CTAN Proxy | `ctan-proxy.siglum.org` | CORS-enabled CTAN package fetching |
-
-### Package Endpoints (packages.siglum.org)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /{name}.data.gz` | Download bundle data (gzipped) |
-| `GET /{name}.meta.json` | Bundle metadata |
-| `GET /registry.json` | List all available bundles |
-| `GET /package-map.json` | Package name → bundle mapping |
-| `GET /wasm/busytex.wasm` | BusyTeX WebAssembly binary |
-| `GET /wasm/busytex.js` | BusyTeX JavaScript loader |
-
-### CTAN Proxy (ctan-proxy.siglum.org)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /{package}` | Fetch CTAN package files |
-
-Response format:
-```json
-{
-  "files": {
-    "/texmf-dist/tex/latex/pkg/pkg.sty": {
-      "content": "...",
-      "encoding": "text"
-    }
-  },
-  "dependencies": ["dep1", "dep2"]
-}
-```
-
-## Credits
-
-This project builds on:
-
-- **[BusyTeX](https://github.com/busytex/busytex)** - The WASM port of TeX Live that makes browser-based LaTeX possible
-- **[TeX Live](https://tug.org/texlive/)** - The underlying TeX distribution
-- **[CTAN](https://ctan.org/)** - Package repository and API
 
 ## License
 
-MIT License - see LICENSE file.
-
-The bundled TeX Live components retain their original licenses (primarily LPPL for LaTeX packages).
+MIT. TeX Live components use LPPL, GPL, and public-domain licenses.

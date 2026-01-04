@@ -45,3 +45,6 @@ packages/local-packages/
 cat/
 curl/
 https:/
+
+# Personal notes
+docs/memory-optimization-ideas.md

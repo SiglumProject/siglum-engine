@@ -149,38 +149,38 @@
       "path": "/texlive/texmf-dist/tex/latex/amsmath",
       "name": "amsmath-2018-12-01.sty",
       "start": 285217,
-      "end": 370316
+      "end": 370464
     },
     {
       "path": "/texlive/texmf-dist/tex/latex/amsmath",
       "name": "amsmath.sty",
-      "start": 370316,
-      "end": 458709
+      "start": 370464,
+      "end": 458834
     },
     {
       "path": "/texlive/texmf-dist/tex/latex/amsmath",
       "name": "amsopn.sty",
-      "start": 458709,
-      "end": 463183
+      "start": 458834,
+      "end": 463308
     },
     {
       "path": "/texlive/texmf-dist/tex/latex/amsmath",
       "name": "amstex.sty",
-      "start": 463183,
-      "end": 532915
+      "start": 463308,
+      "end": 533040
     },
     {
       "path": "/texlive/texmf-dist/tex/latex/amsmath",
       "name": "amstext.sty",
-      "start": 532915,
-      "end": 535359
+      "start": 533040,
+      "end": 535484
     },
     {
       "path": "/texlive/texmf-dist/tex/latex/amsmath",
       "name": "amsxtra.sty",
-      "start": 535359,
-      "end": 537401
+      "start": 535484,
+      "end": 537526
     }
   ],
-  "totalSize": 537401
+  "totalSize": 537526
 }

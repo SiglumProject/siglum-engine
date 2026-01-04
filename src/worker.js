@@ -1183,10 +1183,22 @@ async function handleFormatGenerate(request) {
 
             FS.writeFile('/myformat.ini', preambleContent + '\n\\dump\n');
 
-            const result = Module.callMainWithRedirects([
-                'pdflatex', '-ini', '-jobname=myformat', '-interaction=nonstopmode',
-                '&/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex', '/myformat.ini'
-            ]);
+            // Use the correct engine for format generation
+            let formatArgs;
+            if (engine === 'xelatex') {
+                formatArgs = [
+                    'xelatex', '-ini', '-jobname=myformat', '-interaction=nonstopmode',
+                    '&/texlive/texmf-dist/texmf-var/web2c/xetex/xelatex', '/myformat.ini'
+                ];
+            } else {
+                // Default to pdflatex
+                formatArgs = [
+                    'pdflatex', '-ini', '-jobname=myformat', '-interaction=nonstopmode',
+                    '&/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex', '/myformat.ini'
+                ];
+            }
+            workerLog(`Generating format with engine: ${engine}`);
+            const result = Module.callMainWithRedirects(formatArgs);
 
             if (result.exit_code === 0) {
                 const formatData = FS.readFile('/myformat.fmt');
